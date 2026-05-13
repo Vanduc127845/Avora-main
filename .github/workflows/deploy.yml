@@ -12,6 +12,7 @@ on:
 env:
   NODE_VERSION: '20'
   PNPM_VERSION: '9.15.4'
+  ENABLE_AZURE_DEPLOY: ${{ vars.ENABLE_AZURE_DEPLOY || 'false' }}
 
 jobs:
   ci:
@@ -69,7 +70,7 @@ jobs:
     name: Deploy Web to Azure Static Web Apps
     needs: ci
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.ENABLE_AZURE_DEPLOY == 'true'
 
     steps:
       - name: Download web artifact
@@ -92,7 +93,7 @@ jobs:
     name: Deploy API Gateway to Azure App Service
     needs: ci
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.ENABLE_AZURE_DEPLOY == 'true'
     environment:
       name: Production
       url: ${{ steps.deploy-api.outputs.webapp-url }}
@@ -116,7 +117,7 @@ jobs:
     name: Deploy AI Service to Azure App Service
     needs: ci
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && vars.ENABLE_AZURE_DEPLOY == 'true'
 
     steps:
       - name: Download AI service artifact
