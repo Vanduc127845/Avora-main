@@ -3,6 +3,7 @@ import { useAccessibility } from './store/accessibility.store';
 
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AvoraChatWidget from './components/ai/AvoraChatWidget';
+import { Layout } from './components/layout';
 
 import HomePage from './modules/home/pages/HomePage';
 import DashboardPage from './modules/dashboard/pages/DashboardPage';
@@ -47,24 +48,26 @@ function App() {
 
         {/* Protected routes - require authentication */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/profile/edit" element={<ProfilePage editMode />} />
-          <Route path="/assessment" element={<AssessmentPage />} />
-          <Route path="/jobs" element={<JobsPage />} />
-          <Route path="/jobs/:id" element={<JobDetailPage />} />
-          <Route path="/roadmaps" element={<RoadmapsPage />} />
-          <Route path="/roadmaps/:id" element={<RoadmapDetailPage />} />
-          <Route path="/interviews" element={<InterviewsPage />} />
-          <Route path="/interviews/:id" element={<InterviewSessionPage />} />
-          <Route path="/confidence" element={<ConfidencePage />} />
-          <Route path="/simulation" element={<SimulationPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route element={<Layout />}>
+            <Route path="/home" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/edit" element={<ProfilePage editMode />} />
+            <Route path="/assessment" element={<AssessmentPage />} />
+            <Route path="/jobs" element={<JobsPage />} />
+            <Route path="/jobs/:id" element={<JobDetailPage />} />
+            <Route path="/roadmaps" element={<RoadmapsPage />} />
+            <Route path="/roadmaps/:id" element={<RoadmapDetailPage />} />
+            <Route path="/interviews" element={<InterviewsPage />} />
+            <Route path="/interviews/:id" element={<InterviewSessionPage />} />
+            <Route path="/confidence" element={<ConfidencePage />} />
+            <Route path="/simulation" element={<SimulationPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
         </Route>
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/home" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
       <AvoraChatWidget />
     </div>
