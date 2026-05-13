@@ -1,0 +1,6 @@
+# Terraform Variables for AI Career Copilot
+# Copy this file to terraform.tfvars and modify as needed
+
+environment   = "dev"
+location      = "eastus"
+unique_prefix = "ai4a"

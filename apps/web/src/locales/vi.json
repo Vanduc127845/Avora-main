@@ -1,0 +1,139 @@
+{
+  "common": {
+    "appName": "Trợ Lý Sự Nghiệp AI",
+    "loading": "Đang tải...",
+    "error": "Đã xảy ra lỗi",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "next": "Tiếp theo",
+    "previous": "Quay lại",
+    "submit": "Gửi",
+    "back": "Quay về",
+    "skip": "Bỏ qua",
+    "continue": "Tiếp tục",
+    "done": "Hoàn thành",
+    "search": "Tìm kiếm",
+    "filter": "Lọc",
+    "sort": "Sắp xếp",
+    "clear": "Xóa",
+    "delete": "Xóa",
+    "edit": "Sửa",
+    "view": "Xem",
+    "close": "Đóng",
+    "help": "Trợ giúp"
+  },
+  "nav": {
+    "home": "Trang chủ",
+    "dashboard": "Bảng điều khiển",
+    "profile": "Hồ sơ",
+    "assessment": "Đánh giá",
+    "jobs": "Việc làm",
+    "roadmaps": "Lộ trình của tôi",
+    "interviews": "Phỏng vấn",
+    "confidence": "Tự tin",
+    "simulation": "Mô phỏng",
+    "settings": "Cài đặt"
+  },
+  "home": {
+    "hero": {
+      "title": "Người Bạn Đồng Hành Sự Nghiệp AI",
+      "subtitle": "Giúp người khuyết tật khám phá, chuẩn bị và thành công trong sự nghiệp"
+    },
+    "features": {
+      "discover": {
+        "title": "Khám Phá Bản Thân",
+        "description": "Đánh giá dựa trên AI để hiểu điểm mạnh, kỹ năng và quan tâm nghề nghiệp của bạn"
+      },
+      "prepare": {
+        "title": "Chuẩn Bị Thông Minh",
+        "description": "Lộ trình học tập và phỏng vấn thử được cá nhân hóa theo nhu cầu của bạn"
+      },
+      "apply": {
+        "title": "Ứng tuyển Tự Tin",
+        "description": "Mô tả công việc dễ hiểu và hỗ trợ ứng tuyển"
+      }
+    },
+    "cta": {
+      "start": "Bắt Đầu Hành Trình",
+      "learnMore": "Tìm hiểu thêm"
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Chào Mừng đến với Trợ Lý Sự Nghiệp AI",
+      "subtitle": "Hãy cùng nhau bắt đầu hành trình"
+    },
+    "steps": {
+      "profile": "Hồ sơ",
+      "accessibility": "Hỗ trợ tiếp cận",
+      "goals": "Mục tiêu",
+      "preferences": "Sở thích"
+    }
+  },
+  "dashboard": {
+    "welcome": "Chào mừng trở lại, {{name}}!",
+    "progress": "Tiến độ của bạn",
+    "recentActivity": "Hoạt động gần đây",
+    "quickActions": "Thao tác nhanh",
+    "recommended": "Đề xuất cho bạn"
+  },
+  "accessibility": {
+    "settings": "Cài đặt Hỗ trợ Tiếp cận",
+    "fontSize": "Cỡ Chữ",
+    "highContrast": "Độ Tương Phản Cao",
+    "reducedMotion": "Giảm Chuyển Động",
+    "voiceNavigation": "Điều Hướng Bằng Giọng Nói",
+    "keyboardOnly": "Chế Độ Chỉ Bàn Phím",
+    "screenReader": "Tối Ưu cho Screen Reader",
+    "extraTime": "Thêm Thời Gian",
+    "preferredInput": "Phương Thức Nhập Liệu Ưa Thích"
+  },
+  "assessment": {
+    "title": "Đánh Giá Sự Nghiệp",
+    "intro": "Hãy cùng tìm hiểu sở thích nghề nghiệp của bạn qua một cuộc trò chuyện thân thiện",
+    "start": "Bắt Đầu Đánh Giá",
+    "continue": "Tiếp Tục Đánh Giá",
+    "question": "Câu hỏi {{current}} trong {{total}}",
+    "complete": "Đánh Giá Hoàn Tất!",
+    "results": "Kết Quả Của Bạn"
+  },
+  "jobs": {
+    "title": "Tìm Công Việc Phù Hợp",
+    "search": "Tìm kiếm việc làm...",
+    "filters": "Bộ lọc",
+    "results": "Tìm thấy {{count}} việc làm",
+    "saved": "Việc đã lưu",
+    "applied": "Đã ứng tuyển",
+    "analyze": "Phân Tích Công Việc Này"
+  },
+  "roadmap": {
+    "title": "Lộ Trình Sự Nghiệp Của Bạn",
+    "create": "Tạo Lộ Trình Mới",
+    "progress": "Hoàn thành {{percent}}%",
+    "phase": "Giai đoạn {{number}}",
+    "milestone": "Cột mốc",
+    "task": "Nhiệm vụ"
+  },
+  "interview": {
+    "title": "Luyện Phỏng Vấn",
+    "new": "Bắt Đầu Phỏng Vấn Mới",
+    "history": "Lịch Sử Phỏng Vấn",
+    "feedback": "Phản Hồi Phỏng Vấn",
+    "tips": "Mẹo Phỏng Vấn"
+  },
+  "confidence": {
+    "title": "Xây Dựng Sự Tự Tin",
+    "journal": "Nhật Ký Thành Công",
+    "achievements": "Thành Tích",
+    "support": "Nhận Hỗ Trợ"
+  },
+  "auth": {
+    "login": "Đăng Nhập",
+    "register": "Tạo Tài Khoản",
+    "email": "Địa chỉ Email",
+    "password": "Mật khẩu",
+    "forgotPassword": "Quên mật khẩu?",
+    "noAccount": "Chưa có tài khoản?",
+    "hasAccount": "Đã có tài khoản?"
+  }
+}

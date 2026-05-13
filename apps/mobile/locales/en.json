@@ -1,0 +1,9 @@
+{
+  "app": {
+    "name": "AI Career Copilot"
+  },
+  "common": {
+    "loading": "Loading",
+    "continue": "Continue"
+  }
+}

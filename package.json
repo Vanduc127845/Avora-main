@@ -1,0 +1,44 @@
+{
+  "name": "ai4a",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Career Copilot for Disabled - A comprehensive career guidance platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*",
+    "tests"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:web": "turbo run dev --filter=@ai4a/web",
+    "dev:mobile": "turbo run dev --filter=@ai4a/mobile",
+    "dev:api": "turbo run dev --filter=@ai4a/api-gateway",
+    "dev:ai": "turbo run dev --filter=@ai4a/ai-service",
+    "build:shared": "pnpm --filter @ai4a/shared build",
+    "build": "turbo run build",
+    "build:web": "turbo run build --filter=@ai4a/web",
+    "build:mobile": "turbo run build --filter=@ai4a/mobile",
+    "build:api": "turbo run build --filter=@ai4a/api-gateway",
+    "test": "turbo run test",
+    "test:e2e": "pnpm run test:e2e:auth",
+    "test:e2e:auth": "node tests/e2e/auth-smoke.mjs",
+    "test:coverage": "turbo run test:coverage",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "clean": "turbo run clean",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "prettier": "^3.2.0",
+    "turbo": "^1.12.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.4"
+}

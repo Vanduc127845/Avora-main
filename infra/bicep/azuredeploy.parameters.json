@@ -1,0 +1,38 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Azure/terraform-provider-azapi/main/schemas/lates...",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "allowedValues": ["dev", "staging", "prod"],
+      "metadata": {
+        "description": "Environment name"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus",
+      "metadata": {
+        "description": "Azure region"
+      }
+    },
+    "uniquePrefix": {
+      "type": "string",
+      "defaultValue": "ai4a",
+      "metadata": {
+        "description": "Unique prefix for resources"
+      }
+    }
+  },
+  "variables": {
+    "resourcePrefix": "[concat(parameters('uniquePrefix'), '-', parameters('environment'))]",
+    "tags": {
+      "Project": "AI4A",
+      "Environment": "[parameters('environment')]",
+      "ManagedBy": "Bicep"
+    }
+  },
+  "resources": [],
+  "outputs": {}
+}

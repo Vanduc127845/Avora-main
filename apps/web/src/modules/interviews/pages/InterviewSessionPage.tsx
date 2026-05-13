@@ -1,0 +1,359 @@
+import React from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Card, CardContent, Button } from '../../../components/ui';
+import { ArrowLeft, Mic, Square, Pause, ChevronRight, CheckCircle2, Lightbulb, AlertCircle, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { handleApiError, interviewService } from '../../../services';
+import type { InterviewResponse, InterviewSession } from '../../../lib/shared';
+
+export default function InterviewSessionPage() {
+  const { id } = useParams();
+  const [interview, setInterview] = React.useState<InterviewSession | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isRecording, setIsRecording] = React.useState(false);
+  const [response, setResponse] = React.useState('');
+  const [lastFeedback, setLastFeedback] = React.useState<InterviewResponse['feedback'] | null>(null);
+  const [timeRemaining, setTimeRemaining] = React.useState(120);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const loadInterview = async () => {
+      if (!id) return;
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await interviewService.getInterview(id);
+        if (!mounted) return;
+        setInterview(response.interview);
+        setTimeRemaining(response.interview.config.timePerQuestion);
+      } catch (err) {
+        if (!mounted) return;
+        const apiError = handleApiError(err);
+        setError(apiError.message || apiError.error);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+
+    loadInterview();
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
+
+  React.useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (isRecording && timeRemaining > 0) {
+        setTimeRemaining((prev) => prev - 1);
+      }
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [isRecording, timeRemaining]);
+
+  const currentQuestion = interview?.questions[interview.currentQuestionIndex];
+  const isComplete = interview?.status === 'completed';
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const pauseOrResume = async () => {
+    if (!interview) return;
+    setError(null);
+    try {
+      const result =
+        interview.status === 'paused'
+          ? await interviewService.resumeInterview(interview.id)
+          : await interviewService.pauseInterview(interview.id);
+      setInterview(result.interview);
+    } catch (err) {
+      setError(handleApiError(err).error);
+    }
+  };
+
+  const submitResponse = async () => {
+    if (!interview || !currentQuestion || response.trim().length < 5) return;
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const result = await interviewService.submitResponse(interview.id, {
+        questionId: currentQuestion.id,
+        response: response.trim(),
+      });
+      const updated = await interviewService.getInterview(interview.id);
+      setInterview(updated.interview);
+      setLastFeedback(result.feedback);
+      setResponse('');
+      setTimeRemaining(updated.interview.config.timePerQuestion);
+    } catch (err) {
+      const apiError = handleApiError(err);
+      setError(apiError.message || apiError.error);
+    } finally {
+      setIsSubmitting(false);
+      setIsRecording(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center gap-3 py-16">
+          <Loader2 className="h-5 w-5 animate-spin text-primary-600" />
+          <span>Loading interview...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error || !interview) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-4">
+        <Link to="/interviews">
+          <Button variant="ghost" size="sm" leftIcon={<ArrowLeft className="h-4 w-4" />}>
+            Back
+          </Button>
+        </Link>
+        <Card>
+          <CardContent className="py-10 text-red-700">{error || 'Interview not found'}</CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Link to="/interviews">
+            <Button variant="ghost" size="sm" leftIcon={<ArrowLeft className="h-4 w-4" />}>
+              Back
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Practice Interview</h1>
+            <p className="text-sm text-gray-600">
+              Question {Math.min(interview.currentQuestionIndex + 1, interview.questions.length)} of {interview.questions.length}
+            </p>
+          </div>
+        </div>
+        {!isComplete && (
+          <Button variant="outline" size="sm" onClick={pauseOrResume}>
+            <Pause className="h-4 w-4 mr-1" />
+            {interview.status === 'paused' ? 'Resume' : 'Pause'}
+          </Button>
+        )}
+      </div>
+
+      <Card>
+        <CardContent>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary-500 rounded-full transition-all"
+              style={{ width: `${(interview.responses.length / Math.max(1, interview.questions.length)) * 100}%` }}
+            />
+          </div>
+          <div className="flex justify-between mt-2 text-xs text-gray-500">
+            <span>{interview.responses.length} answered</span>
+            <span>{Math.max(0, interview.questions.length - interview.responses.length)} remaining</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {isComplete && interview.feedback ? (
+        <Card>
+          <CardContent className="space-y-6">
+            <div className="flex items-center gap-3 p-4 bg-success-50 rounded-xl">
+              <CheckCircle2 className="h-6 w-6 text-success-600" />
+              <div>
+                <p className="font-medium text-success-900">Interview complete</p>
+                <p className="text-sm text-success-700">Overall score: {interview.feedback.overallScore}/10</p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Strengths</h3>
+                <ul className="space-y-2">
+                  {interview.feedback.strengths.map((strength) => (
+                    <li key={strength} className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-success-500" />
+                      <span className="text-gray-700">{strength}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Areas to Improve</h3>
+                <ul className="space-y-2">
+                  {interview.feedback.improvements.map((improvement) => (
+                    <li key={improvement} className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-warning-500" />
+                      <span className="text-gray-700">{improvement}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {interview.feedback.disabilityDisclosureAdvice && (
+              <div className="p-4 bg-primary-50 rounded-xl">
+                <h3 className="font-semibold text-primary-900 mb-2">Disclosure Coaching</h3>
+                <p className="text-sm text-primary-800 mb-2">{interview.feedback.disabilityDisclosureAdvice.timing}</p>
+                <p className="text-sm text-primary-900">{interview.feedback.disabilityDisclosureAdvice.script}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentQuestion?.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card className="bg-gradient-to-br from-primary-50 to-accent-50 border-primary-100">
+                <CardContent>
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-primary-600 font-bold">{interview.currentQuestionIndex + 1}</span>
+                    </div>
+                    <div>
+                      <span className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs font-medium">
+                        {currentQuestion?.type || 'question'}
+                      </span>
+                      <h2 className="text-xl font-semibold text-gray-900 mt-2">
+                        {currentQuestion?.text || 'No more questions.'}
+                      </h2>
+                    </div>
+                  </div>
+                  {currentQuestion?.accessibilityNotes && (
+                    <div className="flex items-start gap-2 p-3 bg-white rounded-lg">
+                      <Lightbulb className="h-5 w-5 text-warning-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-gray-600">{currentQuestion.accessibilityNotes}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          </AnimatePresence>
+
+          <Card>
+            <CardContent>
+              {lastFeedback && (
+                <div className="space-y-4 mb-6">
+                  <div className="flex items-center gap-2 p-4 bg-success-50 rounded-xl">
+                    <CheckCircle2 className="h-6 w-6 text-success-600" />
+                    <div>
+                      <p className="font-medium text-success-900">Response submitted</p>
+                      <p className="text-sm text-success-700">Score: {lastFeedback.score}/10</p>
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Strengths</h3>
+                      <ul className="space-y-1 text-sm text-gray-600">
+                        {lastFeedback.strengths.map((strength) => <li key={strength}>{strength}</li>)}
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Improve</h3>
+                      <ul className="space-y-1 text-sm text-gray-600">
+                        {lastFeedback.improvements.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-6">
+                <div className="text-center">
+                  <div className={`text-4xl font-bold ${timeRemaining <= 30 ? 'text-red-500' : 'text-gray-900'}`}>
+                    {formatTime(timeRemaining)}
+                  </div>
+                  <p className="text-sm text-gray-500">Time remaining</p>
+                </div>
+
+                <div>
+                  <label className="label mb-2">Your Response</label>
+                  <textarea
+                    value={response}
+                    onChange={(event) => setResponse(event.target.value)}
+                    placeholder="Type your response here. You can use the timer as practice even without audio recording."
+                    className="input min-h-[150px] resize-none"
+                    disabled={isRecording || interview.status === 'paused'}
+                  />
+                </div>
+
+                <div className="flex items-center justify-center gap-4">
+                  {!isRecording ? (
+                    <Button
+                      size="lg"
+                      className="rounded-full w-16 h-16"
+                      onClick={() => {
+                        setIsRecording(true);
+                        setTimeRemaining(interview.config.timePerQuestion);
+                      }}
+                      disabled={interview.status === 'paused'}
+                    >
+                      <Mic className="h-6 w-6" />
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      variant="danger"
+                      className="rounded-full w-16 h-16 bg-red-500 hover:bg-red-600"
+                      onClick={() => setIsRecording(false)}
+                    >
+                      <Square className="h-6 w-6" />
+                    </Button>
+                  )}
+                </div>
+                <p className="text-center text-sm text-gray-500">
+                  {isRecording ? 'Timer running. Click to stop.' : 'Use the microphone button to practice timing.'}
+                </p>
+
+                <Button
+                  className="w-full"
+                  onClick={submitResponse}
+                  isLoading={isSubmitting}
+                  disabled={!currentQuestion || response.trim().length < 5 || interview.status === 'paused'}
+                >
+                  Submit Response
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      <Card>
+        <CardContent>
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-accent-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Lightbulb className="h-5 w-5 text-accent-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-1">Interview Tips</h3>
+              <ul className="text-sm text-gray-600 space-y-1">
+                <li>Use STAR: situation, task, action, result.</li>
+                <li>Ask for time, written questions, or breaks when needed.</li>
+                <li>Keep disability disclosure focused on the support that helps you perform.</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

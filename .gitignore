@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+.next/
+.turbo/
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.*.local
+**/.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+services/api-gateway/data/*.json
+
+# Test coverage
+coverage/
+
+# Mobile builds
+*.ipa
+*.apk
+*.aab
+
+# Docker
+.dockerignore
+
+# Misc
+*.tgz
+.cache/
+
+# Images
+images/
+people/
+.vercel
+.env*.local

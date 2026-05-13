@@ -1,0 +1,53 @@
+const config = {
+  name: 'AI Career Copilot',
+  slug: 'ai-career-copilot',
+  version: '1.0.0',
+  orientation: 'portrait',
+  scheme: 'ai4a',
+  userInterfaceStyle: 'automatic',
+  splash: {
+    resizeMode: 'contain',
+    backgroundColor: '#0ea5e9',
+  },
+  ios: {
+    supportsTablet: true,
+    bundleIdentifier: 'com.ai4a.careercopilot',
+    buildNumber: '1',
+    infoPlist: {
+      NSSpeechRecognitionUsageDescription: 'This app uses speech recognition for interview practice.',
+      NSMicrophoneUsageDescription: 'This app needs access to your microphone for interview practice.',
+    },
+  },
+  android: {
+    adaptiveIcon: {
+      backgroundColor: '#0ea5e9',
+    },
+    package: 'com.ai4a.careercopilot',
+    versionCode: 1,
+    permissions: ['INTERNET', 'RECORD_AUDIO', 'VIBRATE'],
+  },
+  web: {
+    bundler: 'metro',
+    output: 'static',
+  },
+  plugins: [
+    'expo-router',
+    [
+      'expo-speech',
+      {
+        microphonePermission:
+          'Allow AI Career Copilot to access your microphone for interview practice.',
+      },
+    ],
+  ],
+  experiments: {
+    typedRoutes: true,
+  },
+  extra: {
+    eas: {
+      projectId: 'your-eas-project-id',
+    },
+  },
+};
+
+export default config;

@@ -1,0 +1,20 @@
+// AI Career Copilot for Disabled - Bicep Parameters
+// Environment: dev
+
+targetScope = 'resourceGroup'
+
+@description('Environment name')
+param environment string = 'dev'
+
+@description('Location for resources')
+param location string = 'eastus'
+
+@description('Unique prefix for resources')
+param uniquePrefix string = 'ai4a'
+
+// Pass parameters to main template
+var params = {
+  environment: environment
+  location: location
+  uniquePrefix: uniquePrefix
+}

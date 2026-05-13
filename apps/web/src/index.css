@@ -1,0 +1,155 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: 14 165 233;
+    --font-size-scale: 100;
+  }
+
+  html {
+    @apply scroll-smooth;
+    font-size: calc(16px * var(--font-size-scale) / 100);
+  }
+
+  body {
+    @apply bg-stone-50 text-stone-800 antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    @apply text-stone-900 leading-tight;
+  }
+
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-500 rounded;
+  }
+
+  ::selection {
+    @apply bg-primary-200 text-primary-900;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-stone-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-stone-300 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-stone-400;
+  }
+}
+
+@layer components {
+  /* Button base */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all duration-200;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700;
+    @apply focus-visible:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply bg-accent-600 text-white hover:bg-accent-700 active:bg-accent-800;
+    @apply focus-visible:ring-accent-500;
+  }
+
+  .btn-outline {
+    @apply border-2 border-stone-200 text-stone-700 hover:border-stone-300 hover:bg-stone-50;
+    @apply focus-visible:ring-stone-500;
+  }
+
+  .btn-ghost {
+    @apply text-stone-600 hover:bg-stone-100 active:bg-stone-200;
+    @apply focus-visible:ring-stone-500;
+  }
+
+  /* Card base */
+  .card {
+    @apply bg-white rounded-2xl border border-stone-100;
+    @apply transition-shadow duration-200;
+  }
+
+  /* Input base */
+  .input {
+    @apply w-full px-4 py-3 rounded-xl border border-stone-200 bg-white;
+    @apply transition-colors duration-200 placeholder:text-stone-400;
+    @apply focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20;
+  }
+
+  /* Label */
+  .label {
+    @apply block text-sm font-medium text-stone-700 mb-1;
+  }
+
+  /* Heading utilities */
+  .heading-1 {
+    @apply text-display-lg text-stone-900;
+  }
+
+  .heading-2 {
+    @apply text-display-md text-stone-900;
+  }
+
+  .heading-3 {
+    @apply text-display-sm text-stone-900;
+  }
+
+  /* Body text */
+  .text-body {
+    @apply text-base leading-relaxed text-stone-600;
+  }
+
+  .text-small {
+    @apply text-sm leading-relaxed text-stone-500;
+  }
+}
+
+@layer utilities {
+  /* High contrast mode */
+  .high-contrast {
+    @apply contrast-125;
+  }
+
+  /* Reduced motion */
+  .reduced-motion *,
+  .reduced-motion *::before,
+  .reduced-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Screen reader only */
+  .sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  /* Text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Custom underline */
+  .underline-accent {
+    @apply underline decoration-accent-400 decoration-2 underline-offset-4;
+  }
+}

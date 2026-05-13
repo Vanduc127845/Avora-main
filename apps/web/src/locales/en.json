@@ -1,0 +1,139 @@
+{
+  "common": {
+    "appName": "AI Career Copilot",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "save": "Save",
+    "cancel": "Cancel",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "back": "Go Back",
+    "skip": "Skip",
+    "continue": "Continue",
+    "done": "Done",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "clear": "Clear",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "close": "Close",
+    "help": "Help"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "assessment": "Assessment",
+    "jobs": "Jobs",
+    "roadmaps": "My Roadmaps",
+    "interviews": "Interviews",
+    "confidence": "Confidence",
+    "simulation": "Simulation",
+    "settings": "Settings"
+  },
+  "home": {
+    "hero": {
+      "title": "Your AI Career Companion",
+      "subtitle": "Empowering people with disabilities to discover, prepare for, and succeed in meaningful careers"
+    },
+    "features": {
+      "discover": {
+        "title": "Discover Yourself",
+        "description": "AI-powered assessment to understand your strengths, skills, and career interests"
+      },
+      "prepare": {
+        "title": "Prepare Smart",
+        "description": "Personalized learning paths and mock interviews tailored to your needs"
+      },
+      "apply": {
+        "title": "Apply with Confidence",
+        "description": "Easy-to-understand job descriptions and application support"
+      }
+    },
+    "cta": {
+      "start": "Start Your Journey",
+      "learnMore": "Learn More"
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Welcome to AI Career Copilot",
+      "subtitle": "Let's get you set up for success"
+    },
+    "steps": {
+      "profile": "Profile",
+      "accessibility": "Accessibility",
+      "goals": "Goals",
+      "preferences": "Preferences"
+    }
+  },
+  "dashboard": {
+    "welcome": "Welcome back, {{name}}!",
+    "progress": "Your Progress",
+    "recentActivity": "Recent Activity",
+    "quickActions": "Quick Actions",
+    "recommended": "Recommended for You"
+  },
+  "accessibility": {
+    "settings": "Accessibility Settings",
+    "fontSize": "Font Size",
+    "highContrast": "High Contrast",
+    "reducedMotion": "Reduced Motion",
+    "voiceNavigation": "Voice Navigation",
+    "keyboardOnly": "Keyboard Only Mode",
+    "screenReader": "Screen Reader Optimized",
+    "extraTime": "Extra Time for Tasks",
+    "preferredInput": "Preferred Input Method"
+  },
+  "assessment": {
+    "title": "Career Assessment",
+    "intro": "Let's understand your career interests through a friendly conversation",
+    "start": "Start Assessment",
+    "continue": "Continue Assessment",
+    "question": "Question {{current}} of {{total}}",
+    "complete": "Assessment Complete!",
+    "results": "Your Results"
+  },
+  "jobs": {
+    "title": "Find Your Perfect Job",
+    "search": "Search jobs...",
+    "filters": "Filters",
+    "results": "{{count}} jobs found",
+    "saved": "Saved Jobs",
+    "applied": "Applied Jobs",
+    "analyze": "Analyze This Job"
+  },
+  "roadmap": {
+    "title": "Your Career Roadmap",
+    "create": "Create New Roadmap",
+    "progress": "{{percent}}% Complete",
+    "phase": "Phase {{number}}",
+    "milestone": "Milestone",
+    "task": "Task"
+  },
+  "interview": {
+    "title": "Practice Interviews",
+    "new": "Start New Interview",
+    "history": "Interview History",
+    "feedback": "Interview Feedback",
+    "tips": "Interview Tips"
+  },
+  "confidence": {
+    "title": "Build Your Confidence",
+    "journal": "Success Journal",
+    "achievements": "Achievements",
+    "support": "Get Support"
+  },
+  "auth": {
+    "login": "Log In",
+    "register": "Create Account",
+    "email": "Email Address",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?"
+  }
+}

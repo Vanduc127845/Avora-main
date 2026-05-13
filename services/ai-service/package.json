@@ -1,0 +1,33 @@
+{
+  "name": "@ai4a/ai-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "node build.mjs",
+    "build:watch": "node build.mjs --watch",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@ai4a/shared": "workspace:*",
+    "dotenv": "^16.4.1",
+    "expo": "^46.0.21",
+    "expo-router": "^55.0.13",
+    "openai": "^4.25.0",
+    "react-native": "0.85.2",
+    "vite": "8.0.10",
+    "winston": "^3.11.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.0",
+    "@typescript-eslint/parser": "^8.59.0",
+    "esbuild": "^0.27.7",
+    "eslint": "^8.56.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,48 @@
+.vercel
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+.turbo/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+data/*.json
+
+# Test coverage
+coverage/
+
+# Mobile builds
+*.ipa
+*.apk
+*.aab
+
+# Docker
+.dockerignore
+
+# Misc
+*.tgz
+.cache/
+
+# Images
+images/
+people/
