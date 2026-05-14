@@ -37,6 +37,12 @@ export default function AvoraChatWidget() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [agentMessages, isSending, isOpen]);
 
+  React.useEffect(() => {
+    const openChat = () => setIsOpen(true);
+    window.addEventListener('avora:open-agent-chat', openChat);
+    return () => window.removeEventListener('avora:open-agent-chat', openChat);
+  }, []);
+
   if (!isAuthenticated || agent.id === 'assessment') return null;
 
   const updateAgentMessages = (agentId: AgentId, updater: (previous: ChatMessage[]) => ChatMessage[]) => {

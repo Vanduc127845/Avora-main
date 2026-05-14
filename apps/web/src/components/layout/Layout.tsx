@@ -1,5 +1,6 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
+import AgentContextBanner from '../ai/AgentContextBanner';
 import Header from './Header';
 import Sidebar from './Sidebar';
 
@@ -27,6 +28,7 @@ export default function Layout() {
             id="main-content"
           >
             <div className="mx-auto max-w-7xl">
+              <AgentContextBanner />
               <Outlet />
             </div>
           </main>
