@@ -1,254 +1,415 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Button } from '../../../components/ui';
-import { Play, MousePointer, Clock, Star, ArrowRight, Users, Building } from 'lucide-react';
+import {
+  ArrowRight,
+  Briefcase,
+  Building,
+  CheckCircle2,
+  Clock,
+  Loader2,
+  MessageSquareText,
+  Play,
+  RotateCcw,
+  Sparkles,
+  Star,
+  Users,
+} from 'lucide-react';
+import { handleApiError, post } from '../../../services';
+import { useAuthStore } from '../../../store';
 
-const simulations = [
+type Scenario = {
+  id: string;
+  title: string;
+  role: string;
+  category: string;
+  duration: string;
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  setup: string;
+  challenge: string;
+  options: string[];
+  skills: string[];
+};
+
+type SimulationTurn = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+};
+
+type SimulationRecord = {
+  id: string;
+  scenarioTitle: string;
+  completedAt: string;
+  takeaway: string;
+};
+
+const scenarios: Scenario[] = [
   {
-    id: '1',
-    title: 'A Day in the Life: Software Developer',
-    description: 'Experience a typical day working as a software developer',
+    id: 'frontend-accessibility',
+    title: 'Frontend Accessibility Task',
+    role: 'Junior Frontend Developer',
+    category: 'Technology',
     duration: '15 min',
     difficulty: 'Beginner',
-    category: 'technology',
-    rating: 4.8,
-    participants: 234,
-    image: '</>',
+    setup: 'You joined a team that shipped a form. A screen reader user says the error messages are not clear.',
+    challenge: 'Decide how you would investigate, fix, and explain the accessibility issue.',
+    options: [
+      'Inspect labels, focus order, ARIA error text, then test with keyboard and screen reader.',
+      'Only change the color of the error message to red.',
+      'Ask the designer to solve it and wait for a new mockup.',
+    ],
+    skills: ['HTML semantics', 'Form validation', 'Keyboard testing', 'Communication'],
   },
   {
-    id: '2',
-    title: 'Accessibility in the Workplace',
-    description: 'Learn how to advocate for your accessibility needs',
-    duration: '20 min',
-    difficulty: 'Intermediate',
-    category: 'advocacy',
-    rating: 4.9,
-    participants: 189,
-    image: 'A11y',
-  },
-  {
-    id: '3',
-    title: 'Team Meeting Scenarios',
-    description: 'Practice participating in virtual team meetings',
+    id: 'remote-meeting',
+    title: 'Remote Team Meeting',
+    role: 'Remote Support Specialist',
+    category: 'Communication',
     duration: '10 min',
     difficulty: 'Beginner',
-    category: 'communication',
-    rating: 4.6,
-    participants: 312,
-    image: 'Team',
+    setup: 'A meeting moves quickly and several instructions are only spoken once.',
+    challenge: 'Practice asking for support while keeping the conversation professional.',
+    options: [
+      'Ask for written action items and confirm your assigned task in chat.',
+      'Stay silent and try to remember everything later.',
+      'Leave the meeting without telling anyone.',
+    ],
+    skills: ['Self-advocacy', 'Written communication', 'Task clarification'],
   },
   {
-    id: '4',
-    title: 'Problem-Solving Challenge',
-    description: 'Tackle real-world problems like a professional',
-    duration: '25 min',
-    difficulty: 'Advanced',
-    category: 'problem-solving',
-    rating: 4.7,
-    participants: 156,
-    image: 'Logic',
+    id: 'workload-boundary',
+    title: 'Workload Boundary',
+    role: 'Accessibility QA Tester',
+    category: 'Advocacy',
+    duration: '20 min',
+    difficulty: 'Intermediate',
+    setup: 'Your manager asks you to finish a large test pass today, but your energy is dropping.',
+    challenge: 'Choose how to communicate a realistic plan without over-sharing private health details.',
+    options: [
+      'Give a prioritized plan, name what can finish today, and ask which item matters most.',
+      'Say yes to everything even if quality will drop.',
+      'Explain private medical details to justify the request.',
+    ],
+    skills: ['Prioritization', 'Boundaries', 'Accessibility QA', 'Professional communication'],
+  },
+  {
+    id: 'customer-escalation',
+    title: 'Customer Escalation',
+    role: 'Customer Support Specialist',
+    category: 'Problem solving',
+    duration: '15 min',
+    difficulty: 'Intermediate',
+    setup: 'A customer is frustrated because an accessibility bug blocks their workflow.',
+    challenge: 'Respond with empathy, gather useful details, and escalate clearly.',
+    options: [
+      'Acknowledge the impact, ask for steps to reproduce, offer workaround, and escalate with priority.',
+      'Tell them the product works for most people.',
+      'Ask them to send a long video before offering any help.',
+    ],
+    skills: ['Empathy', 'Bug triage', 'Accessible support', 'Escalation'],
   },
 ];
 
-const companies = [
-  { name: 'TechCorp', rating: 4.5, reviews: 89, accessibility: 'Excellent' },
-  { name: 'DesignStudio', rating: 4.2, reviews: 45, accessibility: 'Good' },
-  { name: 'DataViz Inc', rating: 4.0, reviews: 32, accessibility: 'Good' },
-];
+const historyKey = (userId?: string) => `avora-simulation-history-${userId || 'demo'}`;
 
 export default function SimulationPage() {
+  const user = useAuthStore((state) => state.user);
+  const [activeScenario, setActiveScenario] = React.useState<Scenario>(scenarios[0]);
+  const [turns, setTurns] = React.useState<SimulationTurn[]>([]);
+  const [customResponse, setCustomResponse] = React.useState('');
+  const [history, setHistory] = React.useState<SimulationRecord[]>([]);
+  const [isRunning, setIsRunning] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(historyKey(user?.id));
+      setHistory(saved ? JSON.parse(saved) : []);
+    } catch {
+      setHistory([]);
+    }
+  }, [user?.id]);
+
+  const persistHistory = (next: SimulationRecord[]) => {
+    setHistory(next);
+    window.localStorage.setItem(historyKey(user?.id), JSON.stringify(next));
+  };
+
+  const startScenario = (scenario: Scenario) => {
+    setActiveScenario(scenario);
+    setTurns([
+      {
+        id: `assistant_${Date.now()}`,
+        role: 'assistant',
+        content: `${scenario.setup}\n\nChallenge: ${scenario.challenge}\n\nChoose an option below or write your own response.`,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    setCustomResponse('');
+    setError(null);
+  };
+
+  const askSimulationAgent = async (choice: string) => {
+    setIsRunning(true);
+    setError(null);
+    const userTurn: SimulationTurn = {
+      id: `user_${Date.now()}`,
+      role: 'user',
+      content: choice,
+      createdAt: new Date().toISOString(),
+    };
+    setTurns((previous) => [...previous, userTurn]);
+
+    try {
+      const response = await post<{ response: string }>('/api/ai/chat', {
+        message: `Evaluate this simulation choice and continue the scenario. Scenario: ${activeScenario.title}. Role: ${activeScenario.role}. Setup: ${activeScenario.setup}. Challenge: ${activeScenario.challenge}. User choice: ${choice}. Give specific feedback, risks, a better script if needed, and one next practice step.`,
+        context: {
+          agentId: 'simulation',
+          routePath: '/simulation',
+          moduleTitle: 'Simulation',
+          moduleScope: 'Realistic workplace scenarios, decision practice, and feedback',
+          moduleContext: {
+            scenario: activeScenario,
+            userProfile: {
+              targetRoles: user?.careerProfile?.targetRoles,
+              skills: user?.careerProfile?.skills?.map((skill) => skill.name),
+              accessNeeds: user?.disabilityProfile,
+            },
+            previousTurns: turns.slice(-6),
+          },
+        },
+      });
+
+      const assistantTurn: SimulationTurn = {
+        id: `assistant_${Date.now()}`,
+        role: 'assistant',
+        content: response.response,
+        createdAt: new Date().toISOString(),
+      };
+      setTurns((previous) => [...previous, assistantTurn]);
+      persistHistory([
+        {
+          id: `record_${Date.now()}`,
+          scenarioTitle: activeScenario.title,
+          completedAt: new Date().toISOString(),
+          takeaway: response.response.slice(0, 220),
+        },
+        ...history,
+      ]);
+      setCustomResponse('');
+    } catch (err) {
+      const apiError = handleApiError(err);
+      setError(apiError.message || apiError.error);
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const completedCount = history.length;
+  const coveredSkills = new Set(history.flatMap((record) => {
+    const scenario = scenarios.find((item) => item.title === record.scenarioTitle);
+    return scenario?.skills || [];
+  })).size;
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="heading-2 mb-2">Career Simulation</h1>
+        <h1 className="heading-2 mb-2">Simulation Agent</h1>
         <p className="text-gray-600">
-          Experience different careers through interactive simulations before committing.
+          Practice realistic workplace decisions and get AI feedback on what to say, what to avoid, and what to improve.
         </p>
       </div>
 
-      {/* Featured Simulation */}
-      <Card className="bg-gradient-to-r from-primary-600 to-accent-600 text-white overflow-hidden">
-        <div className="flex">
-          <div className="flex-1 p-8">
-            <span className="px-2 py-1 bg-white/20 rounded text-sm mb-4 inline-block">
-              Featured
-            </span>
-            <h2 className="text-2xl font-bold mb-2">
-              {simulations[0].title}
-            </h2>
-            <p className="text-white/90 mb-6">
-              {simulations[0].description}
-            </p>
-            <div className="flex items-center gap-4 mb-6">
-              <span className="flex items-center gap-1 text-sm">
-                <Clock className="h-4 w-4" />
-                {simulations[0].duration}
-              </span>
-              <span className="flex items-center gap-1 text-sm">
-                <Star className="h-4 w-4 text-warning-300 fill-warning-300" />
-                {simulations[0].rating}
-              </span>
-              <span className="flex items-center gap-1 text-sm">
-                <Users className="h-4 w-4" />
-                {simulations[0].participants}
-              </span>
-            </div>
-            <Button className="bg-white text-primary-600 hover:bg-gray-100" size="lg">
-              <Play className="h-5 w-5 mr-2" />
-              Start Simulation
-            </Button>
-          </div>
-          <div className="hidden md:flex items-center justify-center w-48 text-8xl bg-white/10">
-            {simulations[0].image}
-          </div>
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+          {error}
         </div>
-      </Card>
+      )}
 
-      {/* Simulation Categories */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Browse by Category</h2>
-        <div className="flex flex-wrap gap-2">
-          {['All', 'Technology', 'Design', 'Communication', 'Problem Solving', 'Advocacy'].map((cat) => (
-            <button
-              key={cat}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                cat === 'All'
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {cat}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-100 text-primary-700">
+                <Play className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{completedCount}</p>
+                <p className="text-sm text-gray-500">Scenarios practiced</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-success-100 text-success-700">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{coveredSkills}</p>
+                <p className="text-sm text-gray-500">Skills touched</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-warning-100 text-warning-700">
+                <Star className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{activeScenario.difficulty}</p>
+                <p className="text-sm text-gray-500">Current difficulty</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-gray-900">Choose a simulation</h2>
+            <span className="rounded-full bg-primary-50 px-3 py-1 text-sm font-semibold text-primary-700">
+              {scenarios.length} available
+            </span>
+          </div>
+
+          {scenarios.map((scenario) => (
+            <button key={scenario.id} type="button" onClick={() => startScenario(scenario)} className="w-full text-left">
+              <Card className={`transition hover:shadow-lg ${activeScenario.id === scenario.id ? 'ring-2 ring-primary-500' : ''}`}>
+                <CardContent>
+                  <div className="flex gap-4">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gray-100 text-primary-700">
+                      {scenario.category === 'Technology' ? <Briefcase className="h-6 w-6" /> : scenario.category === 'Communication' ? <Users className="h-6 w-6" /> : <Building className="h-6 w-6" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-semibold text-gray-900">{scenario.title}</h3>
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{scenario.difficulty}</span>
+                      </div>
+                      <p className="mt-1 text-sm text-gray-600">{scenario.role}</p>
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {scenario.duration}
+                        </span>
+                        <span>{scenario.skills.slice(0, 3).join(', ')}</span>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </CardContent>
+              </Card>
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Available Simulations */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Available Simulations</h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          {simulations.map((sim) => (
-            <Card key={sim.id} className="hover:shadow-lg transition-all group">
-              <CardContent>
-                <div className="flex gap-4">
-                  <div className="w-20 h-20 bg-gray-100 rounded-xl flex items-center justify-center text-4xl flex-shrink-0">
-                    {sim.image}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{sim.title}</h3>
-                        <p className="text-sm text-gray-600">{sim.description}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 mb-4">
-                      <span className="flex items-center gap-1 text-xs text-gray-500">
-                        <Clock className="h-3 w-3" />
-                        {sim.duration}
-                      </span>
-                      <span className="flex items-center gap-1 text-xs text-gray-500">
-                        <Star className="h-3 w-3 text-warning-500 fill-warning-500" />
-                        {sim.rating}
-                      </span>
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
-                        {sim.difficulty}
-                      </span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full group-hover:border-primary-500 group-hover:text-primary-600"
-                    >
-                      Start
-                      <ArrowRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Task Try-outs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MousePointer className="h-5 w-5 text-primary-600" />
-            Try Out Real Tasks
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-600 mb-4">
-            Get a taste of specific tasks from different jobs:
-          </p>
-          <div className="grid md:grid-cols-4 gap-4">
-            {[
-              { task: 'Write Code', icon: '</>' },
-              { task: 'Design UI', icon: 'UI' },
-              { task: 'Analyze Data', icon: 'Data' },
-              { task: 'Write Content', icon: 'Text' },
-            ].map((item) => (
-              <button
-                key={item.task}
-                className="p-4 border border-gray-200 rounded-xl hover:border-primary-500 hover:bg-primary-50 transition-all text-center"
-              >
-                <div className="text-3xl mb-2">{item.icon}</div>
-                <span className="text-sm font-medium text-gray-900">{item.task}</span>
-              </button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Company Accessibility Ratings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5 text-success-600" />
-            Company Accessibility Ratings
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-600 mb-4">
-            See how companies rate in accessibility based on community feedback:
-          </p>
-          <div className="space-y-4">
-            {companies.map((company) => (
-              <div
-                key={company.name}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                    <Building className="h-5 w-5 text-gray-500" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">{company.name}</h4>
-                    <p className="text-sm text-gray-500">{company.reviews} reviews</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-warning-500 fill-warning-500" />
-                      <span className="font-medium">{company.rating}</span>
-                    </div>
-                    <p className="text-xs text-gray-500">Rating</p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    company.accessibility === 'Excellent'
-                      ? 'bg-success-100 text-success-700'
-                      : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {company.accessibility}
-                  </span>
-                </div>
+        <Card className="min-h-[640px]">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary-600" />
+              {activeScenario.title}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {turns.length === 0 ? (
+              <div className="rounded-2xl bg-primary-50 p-6">
+                <h3 className="text-lg font-semibold text-primary-900">{activeScenario.role}</h3>
+                <p className="mt-2 text-primary-800">{activeScenario.setup}</p>
+                <p className="mt-3 font-medium text-primary-900">{activeScenario.challenge}</p>
+                <Button className="mt-5" onClick={() => startScenario(activeScenario)} leftIcon={<Play className="h-4 w-4" />}>
+                  Start simulation
+                </Button>
               </div>
-            ))}
-          </div>
-          <Button variant="outline" className="w-full mt-4">
-            View All Companies
-          </Button>
+            ) : (
+              <div className="max-h-[360px] space-y-3 overflow-y-auto rounded-2xl bg-gray-50 p-4">
+                {turns.map((turn) => (
+                  <div key={turn.id} className={`flex ${turn.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className={`max-w-[86%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-6 ${
+                        turn.role === 'user' ? 'bg-primary-600 text-white' : 'bg-white text-gray-800 shadow-sm'
+                      }`}
+                    >
+                      {turn.content}
+                    </div>
+                  </div>
+                ))}
+                {isRunning && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Simulation Agent is evaluating...
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <h3 className="font-semibold text-gray-900">Choose a response</h3>
+              {activeScenario.options.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => askSimulationAgent(option)}
+                  disabled={isRunning}
+                  className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-sm text-gray-700 transition hover:border-primary-300 hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <label className="label">Or write your own response</label>
+              <textarea
+                className="input min-h-[120px] resize-none"
+                value={customResponse}
+                onChange={(event) => setCustomResponse(event.target.value)}
+                placeholder="Type what you would say or do in this situation..."
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => askSimulationAgent(customResponse)}
+                  disabled={!customResponse.trim()}
+                  isLoading={isRunning}
+                  leftIcon={<MessageSquareText className="h-4 w-4" />}
+                >
+                  Submit custom response
+                </Button>
+                <Button variant="outline" onClick={() => startScenario(activeScenario)} leftIcon={<RotateCcw className="h-4 w-4" />}>
+                  Restart
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Practice History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {history.length === 0 ? (
+            <p className="rounded-2xl bg-gray-50 p-5 text-center text-gray-500">
+              Completed simulation feedback will appear here.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {history.slice(0, 5).map((record) => (
+                <article key={record.id} className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-semibold text-gray-900">{record.scenarioTitle}</h3>
+                    <span className="text-xs text-gray-500">{new Date(record.completedAt).toLocaleString()}</span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-gray-600">{record.takeaway}</p>
+                </article>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

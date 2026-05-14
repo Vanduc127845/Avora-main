@@ -11,6 +11,7 @@ import {
   FileText,
   HeartPulse,
   LineChart,
+  Loader2,
   Map,
   MessageCircle,
   Mic,
@@ -25,6 +26,8 @@ import {
   UserRoundCheck,
 } from 'lucide-react';
 import { useAuthStore } from '../../../store';
+import { assessmentService, handleApiError, interviewService, jobService, roadmapService } from '../../../services';
+import type { Assessment, InterviewSession, Job, Roadmap } from '../../../lib/shared';
 
 const collaborators = [
   { name: 'Avora', image: 'A', tone: 'bg-stone-950 text-white' },
@@ -124,7 +127,7 @@ function AvatarStack() {
   );
 }
 
-function ProgressTrack() {
+function ProgressTrack({ items = progressTimeline }: { items?: typeof progressTimeline }) {
   return (
     <div className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -142,7 +145,7 @@ function ProgressTrack() {
       </div>
 
       <div className="space-y-4">
-        {progressTimeline.map((item) => (
+        {items.map((item) => (
           <div key={item.label}>
             <div className="mb-2 flex items-center justify-between text-sm">
               <span className="font-semibold text-stone-700">{item.label}</span>
@@ -176,6 +179,127 @@ function WeeklyChart() {
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const firstName = user?.name?.split(' ')[0] || 'there';
+  const [snapshot, setSnapshot] = React.useState<{
+    savedJobs: Job[];
+    roadmaps: Roadmap[];
+    interviews: InterviewSession[];
+    assessments: Assessment[];
+  }>({
+    savedJobs: [],
+    roadmaps: [],
+    interviews: [],
+    assessments: [],
+  });
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let mounted = true;
+
+    const loadSnapshot = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      const [savedJobsResult, roadmapsResult, interviewsResult, assessmentsResult] = await Promise.allSettled([
+        jobService.getSavedJobs(),
+        roadmapService.getRoadmaps(),
+        interviewService.getInterviews(),
+        assessmentService.getHistory(),
+      ]);
+
+      if (!mounted) return;
+
+      setSnapshot({
+        savedJobs: savedJobsResult.status === 'fulfilled' ? savedJobsResult.value.jobs : [],
+        roadmaps: roadmapsResult.status === 'fulfilled' ? roadmapsResult.value.roadmaps : [],
+        interviews: interviewsResult.status === 'fulfilled' ? interviewsResult.value.interviews : [],
+        assessments: assessmentsResult.status === 'fulfilled' ? assessmentsResult.value.assessments : [],
+      });
+
+      const failed = [savedJobsResult, roadmapsResult, interviewsResult, assessmentsResult].find(
+        (result) => result.status === 'rejected'
+      );
+      if (failed?.status === 'rejected') {
+        const apiError = handleApiError(failed.reason);
+        setError(apiError.message || apiError.error);
+      }
+
+      setIsLoading(false);
+    };
+
+    loadSnapshot();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const profileCompletion = React.useMemo(() => {
+    const checks = [
+      Boolean(user?.name),
+      Boolean(user?.email),
+      Boolean(user?.disabilityProfile?.primaryType),
+      Boolean(user?.disabilityProfile?.severity),
+      Boolean(user?.careerProfile?.experienceLevel),
+      Boolean(user?.careerProfile?.targetRoles?.length),
+      Boolean(user?.careerProfile?.skills?.length),
+      Boolean(user?.careerProfile?.workPreferences?.remote),
+    ];
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  }, [user]);
+
+  const completedAssessments = snapshot.assessments.filter((assessment) => assessment.status === 'completed').length;
+  const roadmapAverage = snapshot.roadmaps.length
+    ? Math.round(snapshot.roadmaps.reduce((sum, roadmap) => sum + roadmap.progress.percentComplete, 0) / snapshot.roadmaps.length)
+    : 0;
+  const completedInterviews = snapshot.interviews.filter((interview) => interview.status === 'completed').length;
+  const interviewAverage = snapshot.interviews.length
+    ? Math.round(
+        (snapshot.interviews.reduce((sum, interview) => sum + (interview.feedback?.overallScore || 0), 0) /
+          snapshot.interviews.length) *
+          10
+      )
+    : 0;
+  const readiness = Math.round(
+    profileCompletion * 0.25 +
+      Math.min(100, completedAssessments * 100) * 0.2 +
+      Math.min(100, snapshot.savedJobs.length * 20) * 0.2 +
+      roadmapAverage * 0.2 +
+      Math.min(100, Math.max(completedInterviews * 25, interviewAverage)) * 0.15
+  );
+
+  const liveMetrics = [
+    { label: 'Profile', value: `${profileCompletion}%`, delta: user?.careerProfile?.skills?.length ? `${user.careerProfile.skills.length} skills` : 'Add skills', icon: UserRoundCheck, tone: 'border-primary-200 bg-primary-50 text-primary-700' },
+    { label: 'Roadmaps', value: String(snapshot.roadmaps.length), delta: `${roadmapAverage}% avg`, icon: Map, tone: 'border-sky-200 bg-sky-50 text-sky-700' },
+    { label: 'Saved jobs', value: String(snapshot.savedJobs.length), delta: snapshot.savedJobs.length ? 'Ready' : 'Find roles', icon: Briefcase, tone: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+    { label: 'Practice', value: `${completedInterviews}/${snapshot.interviews.length}`, delta: interviewAverage ? `${interviewAverage}% score` : 'Start', icon: Mic, tone: 'border-amber-200 bg-amber-50 text-amber-700' },
+  ];
+
+  const liveProgressTimeline = [
+    { label: 'Profile', value: profileCompletion, amount: `${profileCompletion}%`, color: 'bg-primary-500' },
+    { label: 'Assessment', value: completedAssessments ? 100 : 0, amount: completedAssessments ? 'Complete' : 'Start', color: 'bg-stone-950' },
+    { label: 'Jobs', value: Math.min(100, snapshot.savedJobs.length * 20), amount: `${snapshot.savedJobs.length} saved`, color: 'bg-sky-500' },
+    { label: 'Interview', value: Math.min(100, Math.max(completedInterviews * 25, interviewAverage)), amount: `${snapshot.interviews.length} sessions`, color: 'bg-amber-500' },
+  ];
+
+  const livePlatforms = [
+    { name: 'Assessment', value: completedAssessments ? '100%' : '0%', amount: completedAssessments ? 'Complete' : 'Needs input', icon: Sparkles, color: 'text-primary-600', bg: 'bg-primary-50' },
+    { name: 'Jobs', value: `${Math.min(100, snapshot.savedJobs.length * 20)}%`, amount: `${snapshot.savedJobs.length} saved roles`, icon: Briefcase, color: 'text-sky-600', bg: 'bg-sky-50' },
+    { name: 'Roadmaps', value: `${roadmapAverage}%`, amount: `${snapshot.roadmaps.length} plans`, icon: Map, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { name: 'Interview', value: `${Math.min(100, Math.max(completedInterviews * 25, interviewAverage))}%`, amount: `${snapshot.interviews.length} sessions`, icon: Mic, color: 'text-amber-600', bg: 'bg-amber-50' },
+  ];
+
+  const liveTableRows = [
+    { module: 'Profile', owner: 'You', score: `${profileCompletion}%`, status: profileCompletion >= 80 ? 'Ready' : 'Review', trend: user?.careerProfile?.targetRoles?.length ? `${user.careerProfile.targetRoles.length} roles` : 'Missing roles', icon: UserRoundCheck },
+    { module: 'Career assessment', owner: 'Avora', score: completedAssessments ? '100%' : '0%', status: completedAssessments ? 'Done' : 'Start', trend: `${snapshot.assessments.length} runs`, icon: Sparkles },
+    { module: 'Accessible jobs', owner: 'Jobs Agent', score: `${snapshot.savedJobs.length}`, status: snapshot.savedJobs.length ? 'Active' : 'Find', trend: 'saved', icon: Briefcase },
+    { module: 'Mock interview', owner: 'Interview Agent', score: `${snapshot.interviews.length}`, status: completedInterviews ? 'Review' : 'Next', trend: `${completedInterviews} done`, icon: Mic },
+  ];
+
+  const liveInsights = [
+    { label: 'Best match', value: user?.careerProfile?.targetRoles?.[0] || snapshot.savedJobs[0]?.basic.title || 'Not set', helper: 'From profile and saved jobs', icon: Target },
+    { label: 'Access fit', value: user?.disabilityProfile?.primaryType ? 'Profiled' : 'Needs setup', helper: 'Add access needs in Profile', icon: ShieldCheck },
+    { label: 'Next review', value: snapshot.roadmaps[0] ? 'Roadmap' : 'Assessment', helper: snapshot.roadmaps[0]?.title || 'Start discovery', icon: CalendarDays },
+  ];
 
   return (
     <div className="space-y-5 text-stone-950">
@@ -216,8 +340,15 @@ export default function DashboardPage() {
                   Welcome back, {firstName}
                 </h1>
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <span className="text-3xl font-bold tracking-normal text-stone-950">82% ready</span>
-                  <span className="rounded-full bg-primary-500 px-2.5 py-1 text-xs font-bold text-white">+7.9%</span>
+                  <span className="text-3xl font-bold tracking-normal text-stone-950">{readiness}% ready</span>
+                  {isLoading ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2.5 py-1 text-xs font-bold text-primary-700">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Syncing
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-primary-500 px-2.5 py-1 text-xs font-bold text-white">Live data</span>
+                  )}
                   <span className="rounded-full bg-primary-100 px-2.5 py-1 text-xs font-bold text-primary-700">
                     Accessibility-informed
                   </span>
@@ -246,7 +377,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-6 grid gap-3 md:grid-cols-4">
-              {metrics.map((metric) => {
+              {liveMetrics.map((metric) => {
                 const Icon = metric.icon;
                 return (
                   <article key={metric.label} className={`rounded-[24px] border p-4 ${metric.tone}`}>
@@ -261,6 +392,12 @@ export default function DashboardPage() {
               })}
             </div>
 
+            {error && (
+              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                Some dashboard data could not sync: {error}
+              </div>
+            )}
+
             <div className="mt-5 rounded-[28px] border border-stone-200 bg-stone-50 p-3">
               <div className="flex flex-col gap-3 rounded-[22px] bg-white p-4 shadow-sm lg:flex-row lg:items-center">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -270,9 +407,9 @@ export default function DashboardPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3 text-sm font-bold text-stone-950">
                       <span>4 modules</span>
-                      <span>12 matches</span>
-                      <span>3 plans</span>
-                      <span>1 practice</span>
+                      <span>{snapshot.savedJobs.length} saved jobs</span>
+                      <span>{snapshot.roadmaps.length} plans</span>
+                      <span>{snapshot.interviews.length} practice</span>
                     </div>
                     <div className="mt-2 grid h-2 overflow-hidden rounded-full bg-stone-100 grid-cols-[40fr_30fr_22fr_8fr]">
                       <div className="bg-primary-500" />
@@ -295,10 +432,10 @@ export default function DashboardPage() {
           <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-2">
             <article className="rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400">Top match</p>
-              <p className="mt-3 text-3xl font-bold text-stone-950">72</p>
+              <p className="mt-3 text-3xl font-bold text-stone-950">{readiness}</p>
               <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-stone-500">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-xs text-sky-700">A</span>
-                Frontend roles
+                {user?.careerProfile?.targetRoles?.[0] || snapshot.savedJobs[0]?.basic.title || 'Pick a role'}
               </div>
             </article>
 
@@ -307,11 +444,13 @@ export default function DashboardPage() {
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400">Best path</p>
                 <Sparkles className="h-4 w-4 text-amber-300" />
               </div>
-              <p className="mt-3 text-2xl font-bold">Frontend</p>
-              <p className="mt-1 text-sm font-medium text-stone-300">Remote-first pathway</p>
+              <p className="mt-3 text-2xl font-bold">{user?.careerProfile?.targetRoles?.[0] || 'Assessment'}</p>
+              <p className="mt-1 text-sm font-medium text-stone-300">
+                {snapshot.roadmaps[0]?.title || 'Start a focused pathway'}
+              </p>
             </article>
 
-            {insights.map((item) => {
+            {liveInsights.map((item) => {
               const Icon = item.icon;
               return (
                 <article key={item.label} className="rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm">
@@ -346,7 +485,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-3">
-              {platforms.map((platform) => {
+              {livePlatforms.map((platform) => {
                 const Icon = platform.icon;
                 return (
                   <Link
@@ -425,7 +564,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {tableRows.map((row) => {
+                {liveTableRows.map((row) => {
                   const Icon = row.icon;
                   return (
                     <tr key={row.module} className="rounded-[18px] bg-stone-50 text-sm">
@@ -494,7 +633,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <ProgressTrack />
+        <ProgressTrack items={liveProgressTimeline} />
       </section>
 
       <section className="rounded-[28px] border border-primary-100 bg-primary-50 p-4 shadow-sm">
