@@ -13,7 +13,7 @@ type ChatMessage = {
   content: string;
 };
 
-type AIProvider = 'azure-openai' | 'openai' | 'demo-fallback';
+type AIProvider = 'azure-openai' | 'openai' | 'groq' | 'ollama' | 'demo-fallback';
 
 type AIStatus = {
   provider: AIProvider;
@@ -66,6 +66,12 @@ export class AIService {
   private openAIBaseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
   private openAIApiKey = process.env.OPENAI_API_KEY || '';
   private openAIModel = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  private groqBaseUrl = (process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/$/, '');
+  private groqApiKey = process.env.GROQ_API_KEY || '';
+  private groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+  private preferredProvider = (process.env.AI_PROVIDER || '').toLowerCase();
+  private ollamaBaseUrl = (process.env.OLLAMA_BASE_URL || '').replace(/\/$/, '');
+  private ollamaModel = process.env.OLLAMA_MODEL || 'llama3.1:8b';
   private fallbackEnabled = process.env.AI_ENABLE_DEMO_FALLBACK !== 'false';
 
   isConfigured(): boolean {
@@ -78,8 +84,16 @@ export class AIService {
     const hasAzureDeployment = hasRealEnvValue(this.deployment);
     const hasOpenAIKey = hasRealEnvValue(this.openAIApiKey, ['sk-your-openai-key']);
     const hasOpenAIModel = hasRealEnvValue(this.openAIModel);
+    const hasGroqKey = hasRealEnvValue(this.groqApiKey, ['gsk-your-groq-key']);
+    const hasGroqModel = hasRealEnvValue(this.groqModel);
+    const hasOllamaBaseUrl = hasRealEnvValue(this.ollamaBaseUrl);
+    const hasOllamaModel = hasRealEnvValue(this.ollamaModel);
+    const wantsAzure = this.preferredProvider === 'azure-openai' || !this.preferredProvider;
+    const wantsOpenAI = this.preferredProvider === 'openai' || !this.preferredProvider;
+    const wantsGroq = this.preferredProvider === 'groq' || (!this.preferredProvider && hasGroqKey);
+    const wantsOllama = this.preferredProvider === 'ollama' || (!this.preferredProvider && hasOllamaBaseUrl);
 
-    if (hasAzureEndpoint && hasAzureKey && hasAzureDeployment) {
+    if (wantsAzure && hasAzureEndpoint && hasAzureKey && hasAzureDeployment) {
       return {
         provider: 'azure-openai',
         configured: true,
@@ -89,13 +103,72 @@ export class AIService {
       };
     }
 
-    if (hasOpenAIKey && hasOpenAIModel) {
+    if (wantsOpenAI && hasOpenAIKey && hasOpenAIModel) {
       return {
         provider: 'openai',
         configured: true,
         fallbackEnabled: this.fallbackEnabled,
         model: this.openAIModel,
         missingEnv: [],
+      };
+    }
+
+    if (wantsGroq && hasGroqKey && hasGroqModel) {
+      return {
+        provider: 'groq',
+        configured: true,
+        fallbackEnabled: this.fallbackEnabled,
+        model: this.groqModel,
+        missingEnv: [],
+      };
+    }
+
+    if (wantsOllama && hasOllamaBaseUrl && hasOllamaModel) {
+      return {
+        provider: 'ollama',
+        configured: true,
+        fallbackEnabled: this.fallbackEnabled,
+        model: this.ollamaModel,
+        missingEnv: [],
+      };
+    }
+
+    if (this.preferredProvider === 'groq') {
+      return {
+        provider: 'demo-fallback',
+        configured: false,
+        fallbackEnabled: this.fallbackEnabled,
+        model: null,
+        missingEnv: [
+          ...(!hasGroqKey ? ['GROQ_API_KEY'] : []),
+          ...(!hasGroqModel ? ['GROQ_MODEL'] : []),
+        ],
+      };
+    }
+
+    if (this.preferredProvider === 'ollama') {
+      return {
+        provider: 'demo-fallback',
+        configured: false,
+        fallbackEnabled: this.fallbackEnabled,
+        model: null,
+        missingEnv: [
+          ...(!hasOllamaBaseUrl ? ['OLLAMA_BASE_URL'] : []),
+          ...(!hasOllamaModel ? ['OLLAMA_MODEL'] : []),
+        ],
+      };
+    }
+
+    if (this.preferredProvider === 'openai') {
+      return {
+        provider: 'demo-fallback',
+        configured: false,
+        fallbackEnabled: this.fallbackEnabled,
+        model: null,
+        missingEnv: [
+          ...(!hasOpenAIKey ? ['OPENAI_API_KEY'] : []),
+          ...(!hasOpenAIModel ? ['OPENAI_MODEL'] : []),
+        ],
       };
     }
 
@@ -123,6 +196,12 @@ export class AIService {
     }
     if (status.provider === 'openai') {
       return this.callOpenAI(messages, jsonMode);
+    }
+    if (status.provider === 'groq') {
+      return this.callGroq(messages, jsonMode);
+    }
+    if (status.provider === 'ollama') {
+      return this.callOllama(messages, jsonMode);
     }
     return null;
   }
@@ -349,6 +428,78 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       return payload.choices?.[0]?.message?.content || null;
     } catch (error) {
       logger.warn('OpenAI fallback activated', { error });
+      return null;
+    }
+  }
+
+  private async callGroq(messages: ChatMessage[], jsonMode = false): Promise<string | null> {
+    try {
+      const response = await fetch(`${this.groqBaseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.groqApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.groqModel,
+          messages,
+          temperature: jsonMode ? 0.25 : 0.6,
+          max_tokens: jsonMode ? 2200 : 800,
+          ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+        }),
+      });
+
+      if (!response.ok) {
+        logger.warn('Groq request failed', {
+          status: response.status,
+          statusText: response.statusText,
+        });
+        return null;
+      }
+
+      const payload = (await response.json()) as {
+        choices?: { message?: { content?: string } }[];
+      };
+      return payload.choices?.[0]?.message?.content || null;
+    } catch (error) {
+      logger.warn('Groq fallback activated', { error });
+      return null;
+    }
+  }
+
+  private async callOllama(messages: ChatMessage[], jsonMode = false): Promise<string | null> {
+    try {
+      const response = await fetch(`${this.ollamaBaseUrl}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.ollamaModel,
+          messages,
+          stream: false,
+          options: {
+            temperature: jsonMode ? 0.25 : 0.6,
+          },
+          ...(jsonMode ? { format: 'json' } : {}),
+        }),
+      });
+
+      if (!response.ok) {
+        logger.warn('Ollama request failed', {
+          status: response.status,
+          statusText: response.statusText,
+        });
+        return null;
+      }
+
+      const payload = (await response.json()) as {
+        message?: { content?: string };
+        response?: string;
+      };
+      return payload.message?.content || payload.response || null;
+    } catch (error) {
+      logger.warn('Ollama fallback activated', { error });
       return null;
     }
   }
