@@ -5,9 +5,9 @@ import { assessmentService, handleApiError } from '../../../services';
 import type { Assessment, Conversation } from '../../../lib/shared';
 
 const starterPrompts = [
-  'I like helping people and solving practical problems.',
-  'I need remote or flexible work because my energy changes during the day.',
-  'I want to learn tech skills but need a clear step-by-step path.',
+  'Summarize my profile, job fit, roadmap, and interview priorities.',
+  'I want a Frontend Developer direction. What should each specialist agent check?',
+  'Give me one combined plan from jobs, roadmap, interview, and confidence.',
 ];
 
 export default function AssessmentPage() {
@@ -99,9 +99,9 @@ export default function AssessmentPage() {
         <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
           <Brain className="h-8 w-8 text-primary-600" />
         </div>
-        <h1 className="heading-2 mb-2">Career Discovery Assessment</h1>
+        <h1 className="heading-2 mb-2">Assessment Orchestrator</h1>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Chat with Avora to identify strengths, work preferences, accessibility needs, and possible career paths.
+          The Assessment AI combines every specialist agent into one focused career direction.
         </p>
       </div>
 
@@ -114,7 +114,7 @@ export default function AssessmentPage() {
       <Card>
         <CardContent>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Discovery progress</span>
+            <span className="text-sm text-gray-600">Orchestration progress</span>
             <span className="text-sm font-medium text-primary-600">{progress}% ready</span>
           </div>
           <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -152,7 +152,7 @@ export default function AssessmentPage() {
               {isSending && (
                 <div className="flex items-center gap-2 text-gray-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">Avora is thinking...</span>
+                  <span className="text-sm">Assessment Orchestrator is thinking...</span>
                 </div>
               )}
             </div>
@@ -193,7 +193,7 @@ export default function AssessmentPage() {
                     onKeyDown={(event) => {
                       if (event.key === 'Enter') handleSend();
                     }}
-                    placeholder="Type your answer here"
+                    placeholder="Ask the Assessment Orchestrator..."
                     className="input flex-1"
                     disabled={isSending}
                   />
@@ -246,11 +246,11 @@ export default function AssessmentPage() {
               <Sparkles className="h-5 w-5 text-primary-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 mb-1">Assessment tips</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">Multi-agent assessment tips</h3>
               <ul className="text-sm text-gray-600 space-y-1">
-                <li>Share specific tasks you enjoy or avoid.</li>
-                <li>Mention accessibility needs only at the level you are comfortable sharing.</li>
-                <li>Use the complete button when Avora has enough context.</li>
+                <li>Use Jobs Agent for selected-job gaps, then ask Assessment to summarize.</li>
+                <li>Use Roadmap and Interview agents for execution details.</li>
+                <li>Use Complete when the orchestrator has enough context to recommend careers.</li>
               </ul>
             </div>
           </div>

@@ -13,26 +13,37 @@ import {
   User,
   X,
 } from 'lucide-react';
+import { navigationAgents } from '../../lib/agentRegistry';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const navItems = [
-  { path: '/dashboard', icon: BarChart3, label: 'Dashboard', description: 'Overview' },
-  { path: '/profile', icon: User, label: 'Profile', description: 'Your access needs' },
-  { path: '/assessment', icon: Sparkles, label: 'Assessment', description: 'Career discovery' },
-  { path: '/jobs', icon: Briefcase, label: 'Jobs', description: 'Accessible roles' },
-  { path: '/roadmaps', icon: Map, label: 'Roadmaps', description: 'Learning plans' },
-  { path: '/interviews', icon: Mic, label: 'Interviews', description: 'Practice sessions' },
-  { path: '/confidence', icon: Heart, label: 'Confidence', description: 'Self support' },
-  { path: '/simulation', icon: Play, label: 'Simulation', description: 'Try scenarios' },
-];
+const iconByPath = {
+  '/dashboard': BarChart3,
+  '/profile': User,
+  '/assessment': Sparkles,
+  '/jobs': Briefcase,
+  '/roadmaps': Map,
+  '/interviews': Mic,
+  '/confidence': Heart,
+  '/simulation': Play,
+  '/settings': Settings,
+  '/docs': HelpCircle,
+};
+
+const navItems = navigationAgents
+  .filter((agent) => !['settings', 'help'].includes(agent.id))
+  .map((agent) => ({
+    ...agent,
+    icon: iconByPath[agent.path as keyof typeof iconByPath] || Sparkles,
+    description: agent.scope,
+  }));
 
 const bottomItems = [
-  { path: '/settings', icon: Settings, label: 'Settings' },
-  { path: '/docs', icon: HelpCircle, label: 'Help' },
+  { path: '/settings', icon: Settings, label: 'Settings', agentName: 'Settings Agent' },
+  { path: '/docs', icon: HelpCircle, label: 'Help', agentName: 'Help Agent' },
 ];
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -99,10 +110,19 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   >
                     <Icon className="h-5 w-5" />
                   </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-bold">{item.label}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2 text-sm font-bold">
+                      {item.label}
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                          isActive ? 'bg-primary-100 text-primary-700' : 'bg-stone-200 text-stone-500'
+                        }`}
+                      >
+                        AI
+                      </span>
+                    </span>
                     <span className={`block truncate text-xs ${isActive ? 'text-primary-600' : 'text-stone-400'}`}>
-                      {item.description}
+                      {item.agentName}
                     </span>
                   </span>
                 </Link>
@@ -115,9 +135,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
                 <Sparkles className="h-5 w-5" />
               </div>
-              <p className="text-sm font-bold">Need a next step?</p>
+              <p className="text-sm font-bold">Assessment orchestrates</p>
               <p className="mt-1 text-xs leading-5 text-stone-300">
-                Open Avora AI and ask for a roadmap, job plan, or interview script.
+                Each page has its own AI agent. Assessment combines their signals into one direction.
               </p>
             </div>
 
@@ -137,7 +157,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     `}
                   >
                     <Icon className="h-4 w-4" />
-                    {item.label}
+                    <span className="flex flex-1 items-center justify-between gap-2">
+                      {item.label}
+                      <span className="rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-stone-500">
+                        AI
+                      </span>
+                    </span>
                   </Link>
                 );
               })}

@@ -59,7 +59,7 @@ export class AssessmentService {
   async createAssessment(userId: string): Promise<Assessment> {
     const supabase = getOptionalSupabaseAdmin();
     const openingMessage =
-      "Hi, I'm Avora. Let's identify your strengths, work preferences, and accessibility needs so I can suggest career paths that fit you. What kind of tasks make you feel capable or curious?";
+      "Hi, I am the Assessment Orchestrator. I will combine signals from Profile, Jobs, Roadmaps, Interviews, Confidence, and Simulation into one clear career direction. Tell me your goal, current skills, and what support you need most right now.";
 
     if (supabase) {
       const { data, error } = await supabase
@@ -147,6 +147,14 @@ export class AssessmentService {
     };
 
     const aiContent = await this.aiService.chat(userId, data.message, {
+      agentId: 'assessment',
+      routePath: '/assessment',
+      moduleTitle: 'Assessment',
+      moduleScope: 'Synthesize specialist agents into one career direction',
+      moduleContext: {
+        assessmentStatus: assessment.status,
+        userMessageCount: assessment.conversations.filter((message) => message.role === 'user').length,
+      },
       history: assessment.conversations.map((message) => ({
         role: message.role,
         content: message.content,

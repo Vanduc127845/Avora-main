@@ -14,6 +14,15 @@ type ChatMessage = {
   content: string;
 };
 
+type ChatContext = {
+  history?: ChatMessage[];
+  agentId?: string;
+  routePath?: string;
+  moduleTitle?: string;
+  moduleScope?: string;
+  moduleContext?: Record<string, unknown>;
+};
+
 type AIProvider = 'azure-openai' | 'openai' | 'groq' | 'ollama' | 'demo-fallback';
 
 type AIStatus = {
@@ -26,6 +35,68 @@ type AIStatus = {
 
 const SYSTEM_PROMPT =
   'You are Avora, a practical AI career copilot for people with disabilities. Be respectful, privacy-preserving, strengths-based, and concrete. Do not make medical or legal claims. Prefer plain language and actionable next steps.';
+
+const AGENT_PROMPTS: Record<string, string> = {
+  dashboard:
+    'You are the Dashboard Agent. Focus on progress, priorities, blockers, and the next best action across Avora. Keep answers short and operational.',
+  profile:
+    'You are the Profile Agent. Focus on skills, strengths, access needs, work preferences, disclosure boundaries, and profile completeness. Do not diagnose medical conditions.',
+  assessment:
+    'You are the Assessment Orchestrator Agent. Synthesize signals from all specialist agents: Profile, Jobs, Roadmaps, Interviews, Confidence, Simulation, Settings, and Dashboard. Break complex user needs into specialist findings, then give one clear final recommendation. Ask for missing information only when it blocks a useful answer.',
+  jobs:
+    'You are the Jobs Agent. Focus on selected roles, job requirements, missing skills, accessibility signals, application readiness, and job-specific next steps. Avoid generic career advice.',
+  roadmaps:
+    'You are the Roadmap Agent. Focus on learning sequence, skill gaps, weekly plan, portfolio proof, pacing, and accessibility-friendly study structure.',
+  interviews:
+    'You are the Interview Agent. Focus on role-specific mock interview questions, STAR answers, technical drills, feedback, and accommodation request scripts.',
+  confidence:
+    'You are the Confidence Agent. Focus on self-advocacy, communication scripts, anxiety-reducing next steps, boundaries, and strengths-based reflection. Stay practical.',
+  simulation:
+    'You are the Simulation Agent. Focus on realistic workplace scenarios, choices, consequences, scripts, and safe practice. Keep the scenario concrete.',
+  settings:
+    'You are the Settings Agent. Focus on app settings, accessibility preferences, notifications, privacy, language, and setup troubleshooting.',
+  help:
+    'You are the Help Agent. Focus on documentation, setup, feature navigation, installation, and explaining how Avora works.',
+  general:
+    'You are the General Routing Agent. Identify which Avora specialist should handle the request, answer if simple, and suggest the right navigation area.',
+};
+
+const inferAgentId = (context?: ChatContext) => {
+  if (context?.agentId && AGENT_PROMPTS[context.agentId]) return context.agentId;
+  const routePath = context?.routePath || '';
+  if (routePath.startsWith('/dashboard')) return 'dashboard';
+  if (routePath.startsWith('/profile')) return 'profile';
+  if (routePath.startsWith('/assessment')) return 'assessment';
+  if (routePath.startsWith('/jobs')) return 'jobs';
+  if (routePath.startsWith('/roadmaps')) return 'roadmaps';
+  if (routePath.startsWith('/interviews')) return 'interviews';
+  if (routePath.startsWith('/confidence')) return 'confidence';
+  if (routePath.startsWith('/simulation')) return 'simulation';
+  if (routePath.startsWith('/settings')) return 'settings';
+  if (routePath.startsWith('/docs')) return 'help';
+  return 'general';
+};
+
+const buildAgentSystemPrompt = (context?: ChatContext) => {
+  const agentId = inferAgentId(context);
+  const moduleLine = context?.moduleTitle
+    ? `Current Avora module: ${context.moduleTitle}. Scope: ${context.moduleScope || 'not specified'}.`
+    : `Current Avora module route: ${context?.routePath || 'unknown'}.`;
+  const extraContext = context?.moduleContext
+    ? `Module context JSON: ${JSON.stringify(context.moduleContext)}`
+    : '';
+
+  return [
+    SYSTEM_PROMPT,
+    AGENT_PROMPTS[agentId] || AGENT_PROMPTS.general,
+    moduleLine,
+    extraContext,
+    'You are one specialist in a multi-agent product. Stay in your scope. If another specialist is needed, name that agent and explain the handoff in one sentence.',
+    'When the user asks in Vietnamese, answer in Vietnamese. Otherwise use the user language.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+};
 
 const asArray = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
@@ -292,10 +363,10 @@ export class AIService {
     throw new Error('AI provider is not configured and demo fallback is disabled.');
   }
 
-  async chat(_userId: string, message: string, context?: { history?: ChatMessage[] }): Promise<string> {
+  async chat(_userId: string, message: string, context?: ChatContext): Promise<string> {
     if (this.isConfigured()) {
       const response = await this.callModel([
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: buildAgentSystemPrompt(context) },
         ...(context?.history || []).slice(-8),
         { role: 'user', content: message },
       ]);
@@ -303,7 +374,7 @@ export class AIService {
       if (response) return response;
     }
 
-    return this.useFallback(() => this.fallbackChat(message));
+    return this.useFallback(() => this.fallbackChat(message, inferAgentId(context)));
   }
 
   async analyzeJobDescription(jobDescription: string, userProfile?: any): Promise<JDAnalysis> {
@@ -608,10 +679,29 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
     }
   }
 
-  private fallbackChat(message: string): string {
+  private fallbackChat(message: string, agentId = 'general'): string {
     const lower = message.toLowerCase();
     const normalized = normalizeVietnamese(message);
     const vietnamese = isVietnameseMessage(message);
+    const prefix = agentId === 'assessment'
+      ? 'Assessment Orchestrator: '
+      : `${(AGENT_PROMPTS[agentId] ? agentId : 'general').replace(/^\w/, (c) => c.toUpperCase())} Agent: `;
+
+    if (agentId === 'jobs') {
+      return `${prefix}Pick a specific job or paste its requirements. I will compare it with your current skills, list missing requirements, then suggest a roadmap and interview practice.`;
+    }
+    if (agentId === 'roadmaps') {
+      return `${prefix}Tell me the target role and your current skills. I will turn the biggest gaps into a weekly learning plan with one portfolio project.`;
+    }
+    if (agentId === 'interviews') {
+      return `${prefix}Tell me the role or selected job. I will create focused questions, expected points, and feedback using STAR and technical evidence.`;
+    }
+    if (agentId === 'profile') {
+      return `${prefix}Share your skills, access needs, preferred work style, and boundaries. I will help make your profile specific enough for job matching.`;
+    }
+    if (agentId === 'assessment') {
+      return `${prefix}I will combine profile, job fit, roadmap, interview, confidence, and simulation signals. Start with your goal, current skills, and what support you need.`;
+    }
 
     if (vietnamese) {
       if (normalized.includes('phong van') || normalized.includes('interview')) {

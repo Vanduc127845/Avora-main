@@ -1,7 +1,9 @@
 import React from 'react';
 import { Loader2, MessageCircle, Send, Sparkles, X } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { handleApiError, post } from '../../services';
 import { useAuthStore } from '../../store';
+import { getAgentForPath, type AgentId } from '../../lib/agentRegistry';
 
 type ChatMessage = {
   id: string;
@@ -9,39 +11,53 @@ type ChatMessage = {
   content: string;
 };
 
-const openingMessage: ChatMessage = {
-  id: 'opening',
-  role: 'assistant',
-  content:
-    'Chào bạn, mình là Avora. Bạn có thể hỏi mình về việc làm, lộ trình học, phỏng vấn, hoặc cách xin hỗ trợ tiếp cận tại nơi làm việc.',
-};
-
 export default function AvoraChatWidget() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const location = useLocation();
+  const agent = getAgentForPath(location.pathname);
   const [isOpen, setIsOpen] = React.useState(false);
-  const [messages, setMessages] = React.useState<ChatMessage[]>([openingMessage]);
+  const [conversations, setConversations] = React.useState<Record<string, ChatMessage[]>>({});
   const [input, setInput] = React.useState('');
   const [isSending, setIsSending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
+  const getOpeningMessage = React.useCallback(
+    (agentId: AgentId, content = agent.opening): ChatMessage => ({
+      id: `opening_${agentId}`,
+      role: 'assistant',
+      content,
+    }),
+    [agent.opening]
+  );
+
+  const agentMessages = conversations[agent.id] || [getOpeningMessage(agent.id)];
+
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, isSending, isOpen]);
+  }, [agentMessages, isSending, isOpen]);
 
-  if (!isAuthenticated) return null;
+  if (!isAuthenticated || agent.id === 'assessment') return null;
+
+  const updateAgentMessages = (agentId: AgentId, updater: (previous: ChatMessage[]) => ChatMessage[]) => {
+    setConversations((previous) => ({
+      ...previous,
+      [agentId]: updater(previous[agentId] || [getOpeningMessage(agentId)]),
+    }));
+  };
 
   const sendMessage = async () => {
     const content = input.trim();
     if (!content || isSending) return;
 
+    const activeAgent = agent;
     const userMessage: ChatMessage = {
       id: `user_${Date.now()}`,
       role: 'user',
       content,
     };
 
-    setMessages((previous) => [...previous, userMessage]);
+    updateAgentMessages(activeAgent.id, (previous) => [...previous, userMessage]);
     setInput('');
     setError(null);
     setIsSending(true);
@@ -50,14 +66,18 @@ export default function AvoraChatWidget() {
       const response = await post<{ response: string }>('/api/ai/chat', {
         message: content,
         context: {
-          history: messages.slice(-8).map((message) => ({
+          agentId: activeAgent.id,
+          routePath: location.pathname,
+          moduleTitle: activeAgent.label,
+          moduleScope: activeAgent.scope,
+          history: agentMessages.slice(-8).map((message) => ({
             role: message.role,
             content: message.content,
           })),
         },
       });
 
-      setMessages((previous) => [
+      updateAgentMessages(activeAgent.id, (previous) => [
         ...previous,
         {
           id: `assistant_${Date.now()}`,
@@ -76,15 +96,15 @@ export default function AvoraChatWidget() {
   return (
     <div className="fixed bottom-5 right-5 z-[70]">
       {isOpen && (
-        <div className="mb-3 flex h-[560px] max-h-[calc(100vh-7rem)] w-[380px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl">
+        <div className="mb-3 flex h-[560px] max-h-[calc(100vh-7rem)] w-[390px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl">
           <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-100 text-primary-700">
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary-100 text-primary-700">
                 <Sparkles className="h-5 w-5" />
               </div>
-              <div>
-                <h2 className="text-sm font-semibold text-stone-900">Avora AI</h2>
-                <p className="text-xs text-stone-500">Trợ lý nghề nghiệp và tiếp cận</p>
+              <div className="min-w-0">
+                <h2 className="truncate text-sm font-semibold text-stone-900">{agent.agentName}</h2>
+                <p className="truncate text-xs text-stone-500">{agent.scope}</p>
               </div>
             </div>
             <button
@@ -98,7 +118,7 @@ export default function AvoraChatWidget() {
           </div>
 
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
-            {messages.map((message) => (
+            {agentMessages.map((message) => (
               <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
@@ -115,7 +135,7 @@ export default function AvoraChatWidget() {
             {isSending && (
               <div className="flex items-center gap-2 text-sm text-stone-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Avora đang trả lời...</span>
+                <span>{agent.agentName} is thinking...</span>
               </div>
             )}
           </div>
@@ -137,7 +157,7 @@ export default function AvoraChatWidget() {
                     sendMessage();
                   }
                 }}
-                placeholder="Hỏi Avora..."
+                placeholder={`Ask ${agent.agentName}...`}
                 className="input flex-1"
                 disabled={isSending}
               />
@@ -146,7 +166,7 @@ export default function AvoraChatWidget() {
                 onClick={sendMessage}
                 disabled={isSending || !input.trim()}
                 className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label="Send message to Avora AI"
+                aria-label={`Send message to ${agent.agentName}`}
               >
                 <Send className="h-5 w-5" />
               </button>
@@ -159,7 +179,7 @@ export default function AvoraChatWidget() {
         type="button"
         onClick={() => setIsOpen((value) => !value)}
         className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-600 text-white shadow-xl hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
-        aria-label="Open Avora AI chat"
+        aria-label={`Open ${agent.agentName} chat`}
       >
         {isOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
       </button>
