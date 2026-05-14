@@ -14,6 +14,7 @@ export const interviewService = {
     targetJobId?: string;
     targetRole?: string;
     jobType?: string;
+    focusAreas?: string[];
     accommodations?: string[];
     config?: InterviewSession['config'];
   }): Promise<{ interview: InterviewSession }> {

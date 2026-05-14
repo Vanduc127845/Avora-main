@@ -1,10 +1,26 @@
 import React from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '../../../components/ui';
-import { MapPin, Building2, DollarSign, CheckCircle2, AlertTriangle, Bookmark, Share2, Sparkles, Loader2, ArrowLeft } from 'lucide-react';
+import {
+  MapPin,
+  Building2,
+  DollarSign,
+  CheckCircle2,
+  AlertTriangle,
+  Bookmark,
+  Share2,
+  Sparkles,
+  Loader2,
+  ArrowLeft,
+  Target,
+  GraduationCap,
+  MessageSquare,
+  ClipboardCheck,
+} from 'lucide-react';
 import { formatCurrency } from '../../../utils/helpers';
-import { handleApiError, jobService } from '../../../services';
+import { handleApiError, interviewService, jobService, roadmapService } from '../../../services';
 import type { JDAnalysis, Job } from '../../../lib/shared';
+import { useAuthStore } from '../../../store';
 
 const salaryLabel = (job: Job) => {
   if (!job.basic.salary) return 'Salary not listed';
@@ -13,11 +29,15 @@ const salaryLabel = (job: Job) => {
 
 export default function JobDetailPage() {
   const { id } = useParams();
-  const [activeTab, setActiveTab] = React.useState<'overview' | 'simplified' | 'accessibility'>('overview');
+  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const [activeTab, setActiveTab] = React.useState<'overview' | 'fit' | 'simplified' | 'accessibility'>('overview');
   const [job, setJob] = React.useState<Job | null>(null);
   const [analysis, setAnalysis] = React.useState<JDAnalysis | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+  const [isCreatingRoadmap, setIsCreatingRoadmap] = React.useState(false);
+  const [isStartingInterview, setIsStartingInterview] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [isSaved, setIsSaved] = React.useState(false);
 
@@ -59,14 +79,85 @@ export default function JobDetailPage() {
     setError(null);
 
     try {
-      const response = await jobService.analyzeJob(id);
+      const response = await jobService.analyzeJob(id, {
+        ...user,
+        selectedJob: job
+          ? {
+              id: job.id,
+              title: job.basic.title,
+              company: job.basic.company,
+              skills: job.details.requirements.skills,
+            }
+          : undefined,
+      });
       setAnalysis(response.analysis);
-      setActiveTab('simplified');
+      setActiveTab('fit');
     } catch (err) {
       const apiError = handleApiError(err);
       setError(apiError.message || apiError.error);
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleCreateRoadmap = async () => {
+    if (!job) return;
+    setIsCreatingRoadmap(true);
+    setError(null);
+
+    try {
+      const focusSkills = analysis?.fit?.roadmapFocus?.length
+        ? analysis.fit.roadmapFocus
+        : analysis?.fit?.missingSkills.map((skill) => skill.name) || job.details.requirements.skills.slice(0, 5);
+      const response = await roadmapService.createRoadmap({
+        targetJobId: job.id,
+        targetRole: job.basic.title,
+        title: `${job.basic.title} gap roadmap`,
+        currentSkills: user?.careerProfile?.skills?.map((skill) => skill.name) || [],
+        settings: {
+          source: 'job-fit-analysis',
+          company: job.basic.company,
+          focusSkills,
+          missingRequirements: analysis?.fit?.missingRequirements || [],
+          accessibilityNeeds: user?.accessibilitySettings || {},
+        },
+      });
+      navigate(`/roadmaps/${response.roadmap.id}`);
+    } catch (err) {
+      const apiError = handleApiError(err);
+      setError(apiError.message || apiError.error);
+    } finally {
+      setIsCreatingRoadmap(false);
+    }
+  };
+
+  const handleStartInterview = async () => {
+    if (!job) return;
+    setIsStartingInterview(true);
+    setError(null);
+
+    try {
+      const response = await interviewService.createInterview({
+        targetJobId: job.id,
+        targetRole: job.basic.title,
+        jobType: job.basic.title,
+        focusAreas: interviewFocus.length ? interviewFocus : roadmapFocus,
+        accommodations: job.accessibility.accommodations,
+        config: {
+          types: ['technical', 'behavioral', 'situational'],
+          difficulty: 'medium',
+          questionCount: 6,
+          timePerQuestion: 120,
+          allowPause: true,
+          includeFollowUp: true,
+        },
+      });
+      navigate(`/interviews/${response.interview.id}`);
+    } catch (err) {
+      const apiError = handleApiError(err);
+      setError(apiError.message || apiError.error);
+    } finally {
+      setIsStartingInterview(false);
     }
   };
 
@@ -109,6 +200,20 @@ export default function JobDetailPage() {
       </div>
     );
   }
+
+  const fit = analysis?.fit;
+  const missingSkills = fit?.missingSkills || [];
+  const missingRequirements = fit?.missingRequirements || [];
+  const matchedSkills = fit?.matchedSkills || [];
+  const portfolioProjects = fit?.portfolioProjects || [];
+  const roadmapFocus = fit?.roadmapFocus?.length
+    ? fit.roadmapFocus
+    : missingSkills.length
+      ? missingSkills.map((skill) => skill.name)
+      : job.details.requirements.skills.slice(0, 5);
+  const interviewFocus = fit?.interviewFocus?.length
+    ? fit.interviewFocus
+    : roadmapFocus.slice(0, 3).map((skill) => `${skill} interview practice`);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -177,6 +282,7 @@ export default function JobDetailPage() {
       <div className="flex gap-4 border-b border-gray-200 overflow-x-auto">
         {[
           { id: 'overview', label: 'Job Overview' },
+          { id: 'fit', label: 'Fit & Gaps' },
           { id: 'simplified', label: 'Easy Language Version' },
           { id: 'accessibility', label: 'Accessibility Info' },
         ].map((tab) => (
@@ -272,14 +378,235 @@ export default function JobDetailPage() {
                   <h4 className="font-semibold text-primary-900">AI Analysis</h4>
                 </div>
                 <p className="text-primary-800 text-sm mb-4">
-                  Generate a plain-language breakdown, skills review, and accessibility considerations for this job.
+                  Compare this selected job with your profile, find missing skills, then create a focused roadmap or mock interview.
                 </p>
                 <Button size="sm" variant="outline" className="border-primary-300 text-primary-700" onClick={handleAnalyze} isLoading={isAnalyzing}>
-                  {analysis ? 'Refresh Analysis' : 'Get Full Analysis'}
+                  {analysis ? 'Refresh Fit Analysis' : 'Analyze This Job'}
                 </Button>
               </CardContent>
             </Card>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'fit' && (
+        <div className="space-y-6">
+          {!fit ? (
+            <Card>
+              <CardContent className="py-10">
+                <div className="mx-auto max-w-2xl text-center">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600">
+                    <Target className="h-6 w-6" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-gray-900">Analyze this job against your profile</h2>
+                  <p className="mt-2 text-gray-600">
+                    Avora will compare this selected role with your current skills, identify gaps, then prepare focused next steps.
+                  </p>
+                  <Button className="mt-5" onClick={handleAnalyze} isLoading={isAnalyzing}>
+                    Analyze Fit & Gaps
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <Card className="border-primary-100 bg-gradient-to-br from-primary-50 to-white">
+                <CardContent>
+                  <div className="grid gap-6 md:grid-cols-[180px_1fr] md:items-center">
+                    <div className="rounded-2xl bg-white p-5 text-center shadow-sm">
+                      <p className="text-sm font-medium text-gray-500">Job match</p>
+                      <p className="mt-2 text-5xl font-bold text-primary-700">{fit.matchScore}%</p>
+                      <p className="mt-2 text-xs text-gray-500">Based on selected job requirements</p>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 text-primary-700">
+                        <Sparkles className="h-5 w-5" />
+                        <span className="text-sm font-semibold uppercase tracking-wide">Focused AI analysis</span>
+                      </div>
+                      <h2 className="mt-2 text-2xl font-bold text-gray-900">{job.basic.title} at {job.basic.company}</h2>
+                      <p className="mt-3 text-gray-700">{fit.verdict}</p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {roadmapFocus.slice(0, 5).map((skill) => (
+                          <span key={skill} className="rounded-full bg-white px-3 py-1 text-sm font-medium text-primary-700 shadow-sm">
+                            Learn: {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-success-600" />
+                      Skills You Already Match
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {matchedSkills.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {matchedSkills.map((skill) => (
+                          <span key={skill} className="rounded-full bg-success-50 px-3 py-1 text-sm font-medium text-success-700">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-600">
+                        Your profile does not list matching skills yet. Add skills in your profile or use the gap list below as your starting point.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-warning-600" />
+                      Missing Skills to Improve
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {missingSkills.length ? (
+                      <div className="space-y-3">
+                        {missingSkills.map((skill) => (
+                          <div key={skill.name} className="rounded-xl border border-gray-200 p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <h3 className="font-semibold text-gray-900">{skill.name}</h3>
+                                <p className="mt-1 text-sm text-gray-600">{skill.reason}</p>
+                              </div>
+                              <span className="rounded-full bg-warning-50 px-2.5 py-1 text-xs font-semibold text-warning-700">
+                                {skill.importance}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-600">No major missing skills were found from the selected job post.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ClipboardCheck className="h-5 w-5 text-primary-600" />
+                      Requirements That Need Evidence
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {missingRequirements.length ? (
+                      <div className="space-y-3">
+                        {missingRequirements.map((item) => (
+                          <div key={item.requirement} className="rounded-xl bg-gray-50 p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="font-medium text-gray-900">{item.requirement}</p>
+                              <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-gray-700">
+                                {item.impact} impact
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-gray-600">{item.workaround}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-600">No extra requirement gap was detected beyond the skills list.</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <GraduationCap className="h-5 w-5 text-primary-600" />
+                      Portfolio Projects to Build
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {portfolioProjects.length ? (
+                      <div className="space-y-3">
+                        {portfolioProjects.map((project) => (
+                          <div key={project.title} className="rounded-xl border border-primary-100 bg-primary-50 p-4">
+                            <h3 className="font-semibold text-primary-900">{project.title}</h3>
+                            <p className="mt-1 text-sm text-primary-800">{project.goal}</p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {project.skills.map((skill) => (
+                                <span key={`${project.title}-${skill}`} className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-primary-700">
+                                  {skill}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-600">Create one small project that demonstrates the top skills from this job post.</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Next Steps from This Job</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="rounded-xl bg-gray-50 p-4">
+                        <h3 className="font-semibold text-gray-900">Roadmap focus</h3>
+                        <ul className="mt-3 space-y-2 text-sm text-gray-700">
+                          {roadmapFocus.slice(0, 5).map((item) => (
+                            <li key={item} className="flex items-start gap-2">
+                              <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary-600" />
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="rounded-xl bg-gray-50 p-4">
+                        <h3 className="font-semibold text-gray-900">Mock interview focus</h3>
+                        <ul className="mt-3 space-y-2 text-sm text-gray-700">
+                          {interviewFocus.slice(0, 5).map((item) => (
+                            <li key={item} className="flex items-start gap-2">
+                              <MessageSquare className="mt-0.5 h-4 w-4 text-primary-600" />
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-gray-200 p-4">
+                      <h3 className="font-semibold text-gray-900">Generate practice tools</h3>
+                      <p className="mt-2 text-sm text-gray-600">
+                        These actions use the selected job, not a generic role, so the plan and questions target the exact gaps above.
+                      </p>
+                      <div className="mt-4 space-y-3">
+                        <Button className="w-full justify-center" onClick={handleCreateRoadmap} isLoading={isCreatingRoadmap}>
+                          Create Gap Roadmap
+                        </Button>
+                        <Button
+                          className="w-full justify-center"
+                          variant="outline"
+                          onClick={handleStartInterview}
+                          isLoading={isStartingInterview}
+                        >
+                          Start Mock Interview
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
       )}
 

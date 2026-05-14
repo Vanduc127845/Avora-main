@@ -176,7 +176,26 @@ export class JobService {
   async analyzeJob(jobId: string, _userId: string, userProfile?: any): Promise<JDAnalysis> {
     const job = await this.getJobById(jobId);
     const description = job
-      ? `${job.basic.title} at ${job.basic.company}\n${job.details.description}\nSkills: ${job.details.requirements.skills.join(', ')}\nAccessibility: ${job.accessibility.features.join(', ')}`
+      ? [
+          `Title: ${job.basic.title}`,
+          `Company: ${job.basic.company}`,
+          `Location: ${job.basic.location}`,
+          `Work mode: ${job.basic.remote}`,
+          `Salary: ${
+            job.basic.salary
+              ? `${job.basic.salary.min}-${job.basic.salary.max} ${job.basic.salary.currency}`
+              : 'Not listed'
+          }`,
+          `Description: ${job.details.description}`,
+          `Responsibilities: ${job.details.responsibilities.join('; ')}`,
+          `Education: ${job.details.requirements.education.join(', ') || 'Not listed'}`,
+          `Experience: ${job.details.requirements.experience || 'Not listed'}`,
+          `Skills: ${job.details.requirements.skills.join(', ')}`,
+          `Benefits: ${job.details.benefits.join(', ') || 'Not listed'}`,
+          `Accessibility features: ${job.accessibility.features.join(', ') || 'Not listed'}`,
+          `Possible accommodations: ${job.accessibility.accommodations.join(', ') || 'Not listed'}`,
+          `Accessibility barriers: ${job.accessibility.barriers.join(', ') || 'Not listed'}`,
+        ].join('\n')
       : jobId;
 
     return this.aiService.analyzeJobDescription(description, userProfile);

@@ -14,6 +14,7 @@ export const roadmapService = {
     targetJobId: string;
     title: string;
     targetRole?: string;
+    currentSkills?: string[];
     settings?: any;
   }): Promise<{ roadmap: Roadmap }> {
     return post<{ roadmap: Roadmap }>('/api/roadmaps', data);

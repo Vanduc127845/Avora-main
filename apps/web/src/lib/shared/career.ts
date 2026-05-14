@@ -50,6 +50,32 @@ export interface JDAnalysis {
     currency: string;
     benchmark: number;
   };
+  fit?: JobFitAnalysis;
+}
+
+export interface JobFitAnalysis {
+  matchScore: number;
+  verdict: string;
+  matchedSkills: string[];
+  missingSkills: {
+    name: string;
+    importance: 'critical' | 'important' | 'nice-to-have';
+    reason: string;
+    learningPriority: number;
+  }[];
+  missingRequirements: {
+    requirement: string;
+    impact: 'high' | 'medium' | 'low';
+    workaround: string;
+  }[];
+  portfolioProjects: {
+    title: string;
+    goal: string;
+    skills: string[];
+  }[];
+  roadmapFocus: string[];
+  interviewFocus: string[];
+  nextActions: string[];
 }
 
 export interface Job {

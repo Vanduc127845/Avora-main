@@ -67,10 +67,15 @@ export class InterviewService {
       includeFollowUp: data.config?.includeFollowUp ?? true,
     };
     const targetRole = data.targetRole || data.jobType || 'Target Role';
+    const focusAreas = Array.isArray(data.focusAreas) ? data.focusAreas.filter((item: unknown) => typeof item === 'string') : [];
     const questions = await this.aiService.generateInterviewQuestions(
       targetRole,
       config.difficulty,
-      config.questionCount
+      config.questionCount,
+      {
+        focusAreas,
+        selectedJobId: data.targetJobId,
+      }
     );
 
     const session: InterviewSession = {

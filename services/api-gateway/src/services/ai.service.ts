@@ -3,6 +3,7 @@ import type {
   InterviewFeedback,
   InterviewQuestion,
   JDAnalysis,
+  JobFitAnalysis,
   Roadmap,
 } from '../types/shared.js';
 import { createId } from '../data/demo-store.js';
@@ -58,6 +59,66 @@ const parseJsonObject = <T>(content: string): T | null => {
 const hasRealEnvValue = (value: string, placeholders: string[] = []) =>
   Boolean(value && !placeholders.includes(value) && !value.includes('your-'));
 
+const clampNumber = (value: unknown, min: number, max: number, fallback: number) => {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(numberValue)));
+};
+
+const uniqueStrings = (values: string[]) =>
+  [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+
+const skillKey = (value: string) =>
+  normalizeVietnamese(value)
+    .replace(/[^a-z0-9+#. ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const collectSkillNames = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object' && 'name' in item && typeof item.name === 'string') return item.name;
+      if (item && typeof item === 'object' && 'title' in item && typeof item.title === 'string') return item.title;
+      return '';
+    })
+    .filter(Boolean);
+};
+
+const extractUserSkillNames = (userProfile: any): string[] => {
+  const careerProfile = userProfile?.careerProfile || userProfile?.career_profile || {};
+  return uniqueStrings([
+    ...collectSkillNames(userProfile?.skills),
+    ...collectSkillNames(userProfile?.currentSkills),
+    ...collectSkillNames(userProfile?.current_skills),
+    ...collectSkillNames(careerProfile.skills),
+    ...collectSkillNames(careerProfile.interests),
+    ...collectSkillNames(careerProfile.targetRoles),
+    ...collectSkillNames(userProfile?.preferences?.focusSkills),
+    ...collectSkillNames(userProfile?.settings?.focusSkills),
+  ]);
+};
+
+const extractLineValues = (content: string, label: string): string[] => {
+  const match = content.match(new RegExp(`${label}:\\s*([^\\n]+)`, 'i'));
+  if (!match?.[1]) return [];
+  return match[1]
+    .split(/[,;|]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const hasSkillMatch = (skill: string, userSkills: string[]) => {
+  const jobKey = skillKey(skill);
+  if (!jobKey) return false;
+  return userSkills.some((userSkill) => {
+    const userKey = skillKey(userSkill);
+    return userKey === jobKey || userKey.includes(jobKey) || jobKey.includes(userKey);
+  });
+};
+
 export class AIService {
   private endpoint = (process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/$/, '');
   private apiKey = process.env.AZURE_OPENAI_API_KEY || '';
@@ -74,11 +135,30 @@ export class AIService {
   private ollamaModel = process.env.OLLAMA_MODEL || 'llama3.1:8b';
   private fallbackEnabled = process.env.AI_ENABLE_DEMO_FALLBACK !== 'false';
 
+  private refreshConfig() {
+    this.endpoint = (process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/$/, '');
+    this.apiKey = process.env.AZURE_OPENAI_API_KEY || '';
+    this.deployment = process.env.AZURE_OPENAI_DEPLOYMENT || '';
+    this.apiVersion = process.env.AZURE_OPENAI_API_VERSION || '2024-02-15-preview';
+    this.openAIBaseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+    this.openAIApiKey = process.env.OPENAI_API_KEY || '';
+    this.openAIModel = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    this.groqBaseUrl = (process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/$/, '');
+    this.groqApiKey = process.env.GROQ_API_KEY || '';
+    this.groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+    this.preferredProvider = (process.env.AI_PROVIDER || '').toLowerCase();
+    this.ollamaBaseUrl = (process.env.OLLAMA_BASE_URL || '').replace(/\/$/, '');
+    this.ollamaModel = process.env.OLLAMA_MODEL || 'llama3.1:8b';
+    this.fallbackEnabled = process.env.AI_ENABLE_DEMO_FALLBACK !== 'false';
+  }
+
   isConfigured(): boolean {
     return this.getStatus().configured;
   }
 
   getStatus(): AIStatus {
+    this.refreshConfig();
+
     const hasAzureEndpoint = hasRealEnvValue(this.endpoint, ['https://your-resource.openai.azure.com']);
     const hasAzureKey = hasRealEnvValue(this.apiKey, ['your-api-key-here']);
     const hasAzureDeployment = hasRealEnvValue(this.deployment);
@@ -207,6 +287,7 @@ export class AIService {
   }
 
   private useFallback<T>(fallback: () => T): T {
+    this.refreshConfig();
     if (this.fallbackEnabled) return fallback();
     throw new Error('AI provider is not configured and demo fallback is disabled.');
   }
@@ -232,7 +313,11 @@ export class AIService {
           { role: 'system', content: `${SYSTEM_PROMPT} Return valid JSON only.` },
           {
             role: 'user',
-            content: `Analyze this job description for an accessibility-aware career seeker.
+            content: `Analyze this exact job for an accessibility-aware career seeker.
+
+Be specific to the selected job. Do not give generic career advice.
+Compare the job requirements against the user's current profile. If the profile is incomplete, say which assumptions you are making and focus on concrete gaps from the job post.
+The fit section must identify what the user already seems to have, what is missing, what to learn first, what portfolio proof to build, and what interview topics to practice. Use matchScore from 0 to 100.
 
 User profile JSON:
 ${JSON.stringify(userProfile || {})}
@@ -246,7 +331,18 @@ Return JSON with this exact shape:
   "keyResponsibilities": [{"original": string, "simplified": string, "difficulty": "easy"|"medium"|"hard", "accommodationPossible": boolean}],
   "skills": [{"name": string, "importance": "required"|"preferred"|"nice-to-have", "transferable": boolean}],
   "accessibility": {"remotePotential": number, "physicalDemands": "minimal"|"moderate"|"significant", "accommodationScore": number, "barriers": string[], "suggestions": string[]},
-  "compensation": {"range": {"min": number, "max": number}, "currency": string, "benchmark": number}
+  "compensation": {"range": {"min": number, "max": number}, "currency": string, "benchmark": number},
+  "fit": {
+    "matchScore": number,
+    "verdict": string,
+    "matchedSkills": string[],
+    "missingSkills": [{"name": string, "importance": "critical"|"important"|"nice-to-have", "reason": string, "learningPriority": number}],
+    "missingRequirements": [{"requirement": string, "impact": "high"|"medium"|"low", "workaround": string}],
+    "portfolioProjects": [{"title": string, "goal": string, "skills": string[]}],
+    "roadmapFocus": string[],
+    "interviewFocus": string[],
+    "nextActions": string[]
+  }
 }`,
           },
         ],
@@ -254,15 +350,17 @@ Return JSON with this exact shape:
       );
 
       const parsed = response ? parseJsonObject<JDAnalysis>(response) : null;
-      if (parsed) return this.normalizeJDAnalysis(parsed);
+      if (parsed) return this.normalizeJDAnalysis(parsed, jobDescription, userProfile);
     }
 
-    return this.useFallback(() => this.fallbackJDAnalysis(jobDescription));
+    return this.useFallback(() => this.fallbackJDAnalysis(jobDescription, userProfile));
   }
 
   async generateRoadmap(userId: string, data: any): Promise<Roadmap> {
     const targetRole = data.targetRole || data.target_role || data.title || 'Accessible Career Path';
     const currentSkills = asArray(data.currentSkills);
+    const settings = data.preferences || data.settings || {};
+    const focusSkills = asArray(settings.focusSkills);
 
     if (this.isConfigured()) {
       const response = await this.callModel(
@@ -274,9 +372,10 @@ Return JSON with this exact shape:
 
 Target role: ${targetRole}
 Current skills: ${currentSkills.join(', ') || 'not specified'}
-Preferences JSON: ${JSON.stringify(data.preferences || data.settings || {})}
+Missing/focus skills from selected job: ${focusSkills.join(', ') || 'not specified'}
+Preferences JSON: ${JSON.stringify(settings)}
 
-Return JSON for fields title, description, currentSkills, gapSkills, phases, settings. Use 3 phases, each with milestones and learning items. Keep items short and accessible.`,
+Return JSON for fields title, description, currentSkills, gapSkills, phases, settings. Use 3 phases. The phases must directly teach the selected-job gap skills first, then portfolio proof, then interview/application practice. Keep items short and accessible.`,
           },
         ],
         true
@@ -316,16 +415,21 @@ Return {"careers":[{"title": string, "matchScore": number, "reasoning": string, 
   async generateInterviewQuestions(
     jobType: string,
     difficulty: string,
-    count: number
+    count: number,
+    context?: { focusAreas?: string[]; selectedJobId?: string }
   ): Promise<InterviewQuestion[]> {
+    const focusAreas = asArray(context?.focusAreas);
+
     if (this.isConfigured()) {
       const response = await this.callModel(
         [
           { role: 'system', content: `${SYSTEM_PROMPT} Return valid JSON only.` },
           {
             role: 'user',
-            content: `Generate ${count} mock interview questions for ${jobType}. Difficulty: ${difficulty}.
-Include behavioral, situational, and disability accommodation/disclosure coaching where appropriate.
+            content: `Generate ${count} mock interview questions for the selected job: ${jobType}. Difficulty: ${difficulty}.
+Focus areas from the job gap analysis: ${focusAreas.join(', ') || 'not specified'}.
+Questions must target this selected job and the missing skills/gaps, not generic career advice.
+Include technical, behavioral, situational, and disability accommodation/disclosure coaching where appropriate.
 Return {"questions":[{"id": string, "text": string, "type": string, "difficulty": string, "followUpQuestions": string[], "expectedPoints": string[], "scoringCriteria": string[], "accessibilityNotes": string}]}.`,
           },
         ],
@@ -335,7 +439,7 @@ Return {"questions":[{"id": string, "text": string, "type": string, "difficulty"
       if (parsed?.questions?.length) return parsed.questions.slice(0, count).map(this.normalizeQuestion);
     }
 
-    return this.useFallback(() => this.fallbackQuestions(jobType, difficulty, count));
+    return this.useFallback(() => this.fallbackQuestions(jobType, difficulty, count, focusAreas));
   }
 
   async getInterviewFeedback(_userId: string, responses: any[], jobType = 'target role'): Promise<InterviewFeedback> {
@@ -531,7 +635,93 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
     return 'I understand. Tell me more about what you do well, what drains your energy or requires support, and what kind of work environment you want.';
   }
 
-  private fallbackJDAnalysis(jobDescription: string): JDAnalysis {
+  private fallbackFitAnalysis(
+    jobDescription: string,
+    userProfile: any,
+    skills: JDAnalysis['skills']
+  ): JobFitAnalysis {
+    const userSkills = extractUserSkillNames(userProfile);
+    const jobSkills = uniqueStrings([
+      ...skills.map((skill) => skill.name),
+      ...extractLineValues(jobDescription, 'Skills'),
+      ...extractLineValues(jobDescription, 'Required skills'),
+    ]);
+    const matchedSkills = jobSkills.filter((skill) => hasSkillMatch(skill, userSkills));
+    const missingSkillNames = jobSkills.filter((skill) => !hasSkillMatch(skill, userSkills)).slice(0, 6);
+    const requiredSkills = new Set(
+      skills
+        .filter((skill) => skill.importance === 'required')
+        .map((skill) => skillKey(skill.name))
+    );
+    const matchScore = jobSkills.length
+      ? Math.round((matchedSkills.length / jobSkills.length) * 70 + 20)
+      : userSkills.length
+        ? 55
+        : 42;
+    const role = extractLineValues(jobDescription, 'Title')[0] || extractLineValues(jobDescription, 'Role')[0] || 'this role';
+    const experience = extractLineValues(jobDescription, 'Experience')[0];
+    const education = extractLineValues(jobDescription, 'Education').join(', ');
+
+    return {
+      matchScore: clampNumber(matchScore, 20, 95, 50),
+      verdict:
+        missingSkillNames.length > 0
+          ? `You have a partial fit for ${role}. Focus first on the highest-priority missing skills before applying or interviewing.`
+          : `You appear to fit the listed skills for ${role}; prepare evidence and interview examples for the job requirements.`,
+      matchedSkills,
+      missingSkills: missingSkillNames.map((name, index) => ({
+        name,
+        importance: requiredSkills.has(skillKey(name)) ? 'critical' : index < 2 ? 'important' : 'nice-to-have',
+        reason: `The selected job asks for ${name}, but it is not clearly present in the current profile.`,
+        learningPriority: index + 1,
+      })),
+      missingRequirements: [
+        ...(experience
+          ? [
+              {
+                requirement: experience,
+                impact: 'high' as const,
+                workaround: 'Use portfolio projects, internship-style tasks, or freelance examples to prove the same ability.',
+              },
+            ]
+          : []),
+        ...(education
+          ? [
+              {
+                requirement: education,
+                impact: 'medium' as const,
+                workaround: 'Highlight equivalent certificates, practical projects, and clear learning evidence.',
+              },
+            ]
+          : []),
+      ],
+      portfolioProjects: [
+        {
+          title: `${role} mini project`,
+          goal: 'Build one small project that proves the top missing requirements from this job post.',
+          skills: missingSkillNames.slice(0, 3).length ? missingSkillNames.slice(0, 3) : jobSkills.slice(0, 3),
+        },
+        {
+          title: 'Accessibility-ready case study',
+          goal: 'Document the problem, solution, tradeoffs, testing steps, and accessibility considerations.',
+          skills: ['Communication', 'Problem solving', ...missingSkillNames.slice(0, 1)],
+        },
+      ],
+      roadmapFocus: missingSkillNames.slice(0, 5),
+      interviewFocus: uniqueStrings([
+        ...missingSkillNames.slice(0, 3).map((skill) => `${skill} fundamentals`),
+        'Explain one relevant project clearly',
+        'Request reasonable accessibility support if needed',
+      ]),
+      nextActions: [
+        'Pick the top 2 missing skills and study them first.',
+        'Build one portfolio project based on this job description.',
+        'Practice interview answers for each required skill and responsibility.',
+      ],
+    };
+  }
+
+  private fallbackJDAnalysis(jobDescription: string, userProfile?: any): JDAnalysis {
     const lower = jobDescription.toLowerCase();
     const remotePotential = lower.includes('remote') || lower.includes('hybrid') ? 88 : 45;
     const physicalDemands =
@@ -542,6 +732,11 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
     ['react', 'javascript', 'typescript', 'sql', 'excel', 'customer support'].forEach((skill) => {
       if (lower.includes(skill)) skills.unshift(skill.replace(/\b\w/g, (c) => c.toUpperCase()));
     });
+    const skillItems = [...new Set(skills)].slice(0, 6).map((name, index) => ({
+      name,
+      importance: index < 2 ? ('required' as const) : ('preferred' as const),
+      transferable: true,
+    }));
 
     return {
       summary: {
@@ -564,11 +759,7 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
           accommodationPossible: true,
         },
       ],
-      skills: [...new Set(skills)].slice(0, 6).map((name, index) => ({
-        name,
-        importance: index < 2 ? ('required' as const) : ('preferred' as const),
-        transferable: true,
-      })),
+      skills: skillItems,
       accessibility: {
         remotePotential,
         physicalDemands,
@@ -586,6 +777,7 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
         currency: 'USD',
         benchmark: 50,
       },
+      fit: this.fallbackFitAnalysis(jobDescription, userProfile, skillItems),
     };
   }
 
@@ -593,6 +785,9 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
     const targetRole = data.targetRole || data.target_role || data.title || 'Accessible Career Path';
     const targetJobId = data.targetJobId || data.target_job_id || 'general';
     const currentSkills = asArray(data.currentSkills);
+    const focusSkills = asArray(data.settings?.focusSkills || data.preferences?.focusSkills);
+    const primaryGap = focusSkills[0] || 'Role fundamentals';
+    const secondaryGap = focusSkills[1] || 'Portfolio evidence';
     const now = new Date();
 
     return {
@@ -604,14 +799,14 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       currentSkills,
       gapSkills: [
         {
-          name: 'Role fundamentals',
+          name: primaryGap,
           importance: 'critical',
           currentLevel: currentSkills.length ? 2 : 1,
           targetLevel: 4,
           resources: [],
         },
         {
-          name: 'Portfolio evidence',
+          name: secondaryGap,
           importance: 'important',
           currentLevel: 1,
           targetLevel: 3,
@@ -620,16 +815,16 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       ],
       phases: [
         this.createPhase(1, 'Foundation', 'Build the core concepts and setup you need.', [
-          'Review role basics in plain language',
-          'Set up assistive tools and preferred workflow',
+          `Learn ${primaryGap} for this selected job`,
+          'Collect accessible learning resources for the job gaps',
         ]),
         this.createPhase(2, 'Practice', 'Turn skills into small work samples.', [
-          'Complete one guided practice project',
-          'Collect feedback and revise your work',
+          `Practice ${secondaryGap}`,
+          'Build one portfolio project that proves the selected job requirements',
         ]),
         this.createPhase(3, 'Apply', 'Prepare application and interview materials.', [
-          'Write a targeted resume summary',
-          'Practice interview answers and accommodation scripts',
+          'Write resume bullets using the portfolio project',
+          'Practice interview answers based on the selected job description',
         ]),
       ],
       settings: {
@@ -679,16 +874,27 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
     ];
   }
 
-  private fallbackQuestions(jobType: string, difficulty: string, count: number): InterviewQuestion[] {
+  private fallbackQuestions(jobType: string, difficulty: string, count: number, focusAreas: string[] = []): InterviewQuestion[] {
+    const primaryFocus = focusAreas[0] || 'the main required skill';
+    const secondaryFocus = focusAreas[1] || 'a relevant portfolio project';
     const base: Omit<InterviewQuestion, 'id'>[] = [
       {
-        text: `Tell me about a time you learned something important for a ${jobType} role.`,
+        text: `This selected ${jobType} job requires ${primaryFocus}. Tell me about a time you learned or practiced that skill.`,
         type: 'behavioral',
         difficulty,
-        followUpQuestions: ['What helped you learn?', 'What would you do differently next time?'],
-        expectedPoints: ['Specific example', 'Learning process', 'Result'],
+        followUpQuestions: ['What helped you learn?', 'How would you prove this skill to the employer?'],
+        expectedPoints: ['Specific example', 'Learning process', 'Evidence or result'],
         scoringCriteria: ['Clarity', 'Specificity', 'Reflection'],
         accessibilityNotes: 'You can ask for a moment to think before answering.',
+      },
+      {
+        text: `If this employer asked you to demonstrate ${secondaryFocus}, what small project or work sample would you show?`,
+        type: 'technical',
+        difficulty,
+        followUpQuestions: ['What would you build first?', 'How would you test or document it?'],
+        expectedPoints: ['Project scope', 'Relevant skills', 'Testing or documentation'],
+        scoringCriteria: ['Job relevance', 'Technical clarity', 'Practical plan'],
+        accessibilityNotes: 'You can describe the work step by step instead of answering quickly.',
       },
       {
         text: 'How do you organize your work when tasks or communication become overwhelming?',
@@ -765,21 +971,107 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
     };
   }
 
-  private normalizeJDAnalysis(analysis: JDAnalysis): JDAnalysis {
+  private normalizeFitAnalysis(fit: JDAnalysis['fit'] | undefined, fallback: JobFitAnalysis): JobFitAnalysis {
+    if (!fit) return fallback;
+
+    const missingSkills = Array.isArray(fit.missingSkills) ? fit.missingSkills : [];
+    const missingRequirements = Array.isArray(fit.missingRequirements) ? fit.missingRequirements : [];
+    const portfolioProjects = Array.isArray(fit.portfolioProjects) ? fit.portfolioProjects : [];
+
     return {
-      ...this.fallbackJDAnalysis(''),
+      ...fallback,
+      ...fit,
+      matchScore: clampNumber(
+        Number(fit.matchScore) > 0 && Number(fit.matchScore) <= 1
+          ? Number(fit.matchScore) * 100
+          : fit.matchScore,
+        0,
+        100,
+        fallback.matchScore
+      ),
+      verdict: fit.verdict || fallback.verdict,
+      matchedSkills: asArray(fit.matchedSkills).length ? asArray(fit.matchedSkills) : fallback.matchedSkills,
+      missingSkills: (missingSkills.length ? missingSkills : fallback.missingSkills).map((skill, index) => ({
+        name: skill.name || fallback.missingSkills[index]?.name || 'Missing skill',
+        importance: ['critical', 'important', 'nice-to-have'].includes(skill.importance)
+          ? skill.importance
+          : fallback.missingSkills[index]?.importance || 'important',
+        reason: skill.reason || fallback.missingSkills[index]?.reason || 'This skill is listed in the selected job.',
+        learningPriority: clampNumber(skill.learningPriority, 1, 10, index + 1),
+      })),
+      missingRequirements: (missingRequirements.length ? missingRequirements : fallback.missingRequirements).map((item, index) => ({
+        requirement: item.requirement || fallback.missingRequirements[index]?.requirement || 'Job requirement',
+        impact: ['high', 'medium', 'low'].includes(item.impact)
+          ? item.impact
+          : fallback.missingRequirements[index]?.impact || 'medium',
+        workaround:
+          item.workaround ||
+          fallback.missingRequirements[index]?.workaround ||
+          'Prepare concrete evidence through projects, practice tasks, or certificates.',
+      })),
+      portfolioProjects: (portfolioProjects.length ? portfolioProjects : fallback.portfolioProjects).map((project, index) => ({
+        title: project.title || fallback.portfolioProjects[index]?.title || 'Portfolio project',
+        goal: project.goal || fallback.portfolioProjects[index]?.goal || 'Show evidence for this job.',
+        skills: asArray(project.skills).length ? asArray(project.skills) : fallback.portfolioProjects[index]?.skills || [],
+      })),
+      roadmapFocus: asArray(fit.roadmapFocus).length ? asArray(fit.roadmapFocus) : fallback.roadmapFocus,
+      interviewFocus: asArray(fit.interviewFocus).length ? asArray(fit.interviewFocus) : fallback.interviewFocus,
+      nextActions: asArray(fit.nextActions).length ? asArray(fit.nextActions) : fallback.nextActions,
+    };
+  }
+
+  private normalizeJDAnalysis(analysis: JDAnalysis, jobDescription = '', userProfile?: any): JDAnalysis {
+    const fallback = this.fallbackJDAnalysis(jobDescription, userProfile);
+    const skills = Array.isArray(analysis.skills) ? analysis.skills : fallback.skills;
+    const fallbackFit = this.fallbackFitAnalysis(jobDescription, userProfile, skills);
+
+    return {
+      ...fallback,
       ...analysis,
-      summary: { ...this.fallbackJDAnalysis('').summary, ...analysis.summary },
-      accessibility: { ...this.fallbackJDAnalysis('').accessibility, ...analysis.accessibility },
-      compensation: { ...this.fallbackJDAnalysis('').compensation, ...analysis.compensation },
-      keyResponsibilities: Array.isArray(analysis.keyResponsibilities) ? analysis.keyResponsibilities : [],
-      skills: Array.isArray(analysis.skills) ? analysis.skills : [],
+      summary: { ...fallback.summary, ...analysis.summary },
+      accessibility: { ...fallback.accessibility, ...analysis.accessibility },
+      compensation: { ...fallback.compensation, ...analysis.compensation },
+      keyResponsibilities: Array.isArray(analysis.keyResponsibilities) ? analysis.keyResponsibilities : fallback.keyResponsibilities,
+      skills,
+      fit: this.normalizeFitAnalysis(analysis.fit, fallbackFit),
     };
   }
 
   private normalizeRoadmap(userId: string, data: any, roadmap: Partial<Roadmap>): Roadmap {
     const fallback = this.fallbackRoadmap(userId, data);
-    const phases = roadmap.phases?.length ? roadmap.phases : fallback.phases;
+    const phases =
+      Array.isArray(roadmap.phases) &&
+      roadmap.phases.length > 0 &&
+      roadmap.phases.every((phase) => Array.isArray(phase.milestones))
+        ? roadmap.phases
+        : fallback.phases;
+    const currentSkills = Array.isArray(roadmap.currentSkills) && roadmap.currentSkills.length
+      ? roadmap.currentSkills
+      : fallback.currentSkills;
+    const rawGapSkills = Array.isArray(roadmap.gapSkills) ? roadmap.gapSkills : [];
+    const gapSkills = rawGapSkills.length
+      ? rawGapSkills.map((skill: any, index) => {
+          if (typeof skill === 'string') {
+            return {
+              name: skill,
+              importance: index === 0 ? ('critical' as const) : ('important' as const),
+              currentLevel: currentSkills.length ? 2 : 1,
+              targetLevel: 4,
+              resources: [],
+            };
+          }
+
+          return {
+            name: skill?.name || fallback.gapSkills[index]?.name || `Gap skill ${index + 1}`,
+            importance: ['critical', 'important', 'nice-to-have'].includes(skill?.importance)
+              ? skill.importance
+              : fallback.gapSkills[index]?.importance || 'important',
+            currentLevel: clampNumber(skill?.currentLevel, 1, 5, fallback.gapSkills[index]?.currentLevel || 1),
+            targetLevel: clampNumber(skill?.targetLevel, 1, 5, fallback.gapSkills[index]?.targetLevel || 4),
+            resources: Array.isArray(skill?.resources) ? skill.resources : [],
+          };
+        })
+      : fallback.gapSkills;
     const totalItems = phases.reduce(
       (count, phase) =>
         count + phase.milestones.reduce((sum, milestone) => sum + milestone.items.length, 0),
@@ -792,6 +1084,8 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       id: roadmap.id || fallback.id,
       userId,
       targetJobId: data.targetJobId || fallback.targetJobId,
+      currentSkills,
+      gapSkills,
       phases,
       settings: { ...fallback.settings, ...roadmap.settings },
       progress: {
