@@ -1,13 +1,19 @@
-import { get, post } from './api';
+import { get, post, type ApiRequestConfig } from './api';
 import type { InterviewSession, InterviewQuestion, InterviewFeedback } from '../lib/shared';
 
 export const interviewService = {
-  async getInterviews(): Promise<{ interviews: InterviewSession[] }> {
-    return get<{ interviews: InterviewSession[] }>('/api/interviews');
+  async getInterviews(config?: ApiRequestConfig): Promise<{ interviews: InterviewSession[] }> {
+    return get<{ interviews: InterviewSession[] }>('/api/interviews', {
+      cacheTtlMs: 30_000,
+      ...config,
+    });
   },
 
-  async getInterview(id: string): Promise<{ interview: InterviewSession }> {
-    return get<{ interview: InterviewSession }>(`/api/interviews/${id}`);
+  async getInterview(id: string, config?: ApiRequestConfig): Promise<{ interview: InterviewSession }> {
+    return get<{ interview: InterviewSession }>(`/api/interviews/${id}`, {
+      cacheTtlMs: 10_000,
+      ...config,
+    });
   },
 
   async createInterview(data: {

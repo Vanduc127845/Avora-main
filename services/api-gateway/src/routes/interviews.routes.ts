@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 import { AppError } from '../middleware/error.middleware.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
+import { aiActionLimiter } from '../middleware/rate-limit.middleware.js';
 import { InterviewService } from '../services/interview.service.js';
 
 const router: Router = Router();
@@ -28,6 +29,7 @@ router.get('/',
 );
 
 router.post('/',
+  aiActionLimiter,
   body('targetJobId').optional().isString(),
   body('config').optional().isObject(),
   async (req: Request, res: Response, next: NextFunction) => {
@@ -100,8 +102,8 @@ const submitResponse = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
-router.post('/:id/respond', ...responseValidators, submitResponse);
-router.post('/:id/answer', ...responseValidators, submitResponse);
+router.post('/:id/respond', aiActionLimiter, ...responseValidators, submitResponse);
+router.post('/:id/answer', aiActionLimiter, ...responseValidators, submitResponse);
 
 router.post('/:id/pause',
   async (req: Request, res: Response, next: NextFunction) => {
@@ -130,6 +132,7 @@ router.post('/:id/resume',
 );
 
 router.post('/:id/complete',
+  aiActionLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;

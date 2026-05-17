@@ -4,14 +4,33 @@ import { logger } from '../utils/logger.js';
 export class AppError extends Error {
   statusCode: number;
   isOperational: boolean;
+  code?: string;
+  retryAfterMs?: number;
+  source?: string;
 
-  constructor(message: string, statusCode: number) {
+  constructor(
+    message: string,
+    statusCode: number,
+    options: { code?: string; retryAfterMs?: number; source?: string } = {}
+  ) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = true;
+    this.code = options.code;
+    this.retryAfterMs = options.retryAfterMs;
+    this.source = options.source;
     Error.captureStackTrace(this, this.constructor);
   }
 }
+
+type StructuredError = Error & {
+  statusCode?: number;
+  code?: string;
+  retryAfterMs?: number;
+  source?: string;
+  provider?: string;
+  isOperational?: boolean;
+};
 
 export const notFoundHandler = (req: Request, res: Response) => {
   res.status(404).json({
@@ -21,16 +40,32 @@ export const notFoundHandler = (req: Request, res: Response) => {
 };
 
 export const errorHandler = (
-  err: Error | AppError,
+  err: StructuredError,
   _req: Request,
   res: Response,
   _next: NextFunction
 ) => {
-  if (err instanceof AppError) {
-    logger.error(`${err.statusCode} - ${err.message}`, { stack: err.stack });
-    return res.status(err.statusCode).json({
+  const statusCode = err instanceof AppError
+    ? err.statusCode
+    : typeof err.statusCode === 'number'
+      ? err.statusCode
+      : null;
+
+  if (statusCode) {
+    logger.error(`${statusCode} - ${err.message}`, {
+      stack: err.stack,
+      code: err.code,
+      source: err.source,
+      retryAfterMs: err.retryAfterMs,
+    });
+    return res.status(statusCode).json({
       error: err.message,
-      statusCode: err.statusCode,
+      message: err.message,
+      statusCode,
+      ...(err.code ? { code: err.code } : {}),
+      ...(err.retryAfterMs !== undefined ? { retryAfterMs: err.retryAfterMs } : {}),
+      ...(err.source ? { source: err.source } : {}),
+      ...(err.provider ? { provider: err.provider } : {}),
     });
   }
 

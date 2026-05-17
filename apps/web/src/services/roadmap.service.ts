@@ -1,13 +1,19 @@
-import { del, get, post, put } from './api';
+import { del, get, post, put, type ApiRequestConfig } from './api';
 import type { Roadmap } from '../lib/shared';
 
 export const roadmapService = {
-  async getRoadmaps(): Promise<{ roadmaps: Roadmap[] }> {
-    return get<{ roadmaps: Roadmap[] }>('/api/roadmaps');
+  async getRoadmaps(config?: ApiRequestConfig): Promise<{ roadmaps: Roadmap[] }> {
+    return get<{ roadmaps: Roadmap[] }>('/api/roadmaps', {
+      cacheTtlMs: 30_000,
+      ...config,
+    });
   },
 
-  async getRoadmap(id: string): Promise<{ roadmap: Roadmap }> {
-    return get<{ roadmap: Roadmap }>(`/api/roadmaps/${id}`);
+  async getRoadmap(id: string, config?: ApiRequestConfig): Promise<{ roadmap: Roadmap }> {
+    return get<{ roadmap: Roadmap }>(`/api/roadmaps/${id}`, {
+      cacheTtlMs: 30_000,
+      ...config,
+    });
   },
 
   async createRoadmap(data: {

@@ -1,9 +1,12 @@
-import { get, post, put, del } from './api';
+import { get, put, del, type ApiRequestConfig } from './api';
 import type { UserProfile, AccessibilitySettings, PrivacySettings } from '../lib/shared';
 
 export const userService = {
-  async getProfile(): Promise<{ user: UserProfile }> {
-    return get<{ user: UserProfile }>('/api/users/profile');
+  async getProfile(config?: ApiRequestConfig): Promise<{ user: UserProfile }> {
+    return get<{ user: UserProfile }>('/api/users/profile', {
+      cacheTtlMs: 60_000,
+      ...config,
+    });
   },
 
   async updateProfile(updates: Partial<UserProfile>): Promise<{ user: UserProfile }> {

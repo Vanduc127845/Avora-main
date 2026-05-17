@@ -1,7 +1,8 @@
-import type { Assessment, AssessmentResult, Conversation } from '../types/shared.js';
-import { createId, demoAssessments } from '../data/demo-store.js';
+import type { Assessment, AssessmentResult, Conversation, OrchestrationPlan, UserProfile } from '../types/shared.js';
+import { createId, demoAssessments, demoProfiles } from '../data/demo-store.js';
 import { getOptionalSupabaseAdmin } from '../utils/supabase.js';
 import { AIService } from './ai.service.js';
+import { JobService } from './job.service.js';
 
 type AssessmentRow = {
   id: string;
@@ -55,11 +56,68 @@ const normalizeAssessment = (row: AssessmentRow, conversations: Conversation[] =
 
 export class AssessmentService {
   private aiService = new AIService();
+  private jobService = new JobService();
+
+  private async loadUserProfile(userId: string): Promise<Partial<UserProfile>> {
+    const supabase = getOptionalSupabaseAdmin();
+
+    if (supabase) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id,email,name,avatar_url,provider,disability_profile,accessibility_settings,career_profile,privacy_settings,created_at,updated_at')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (!error && data) {
+        return {
+          id: data.id,
+          email: data.email || '',
+          name: data.name || '',
+          avatar: data.avatar_url || '',
+          provider: data.provider || 'email',
+          disabilityProfile: data.disability_profile || undefined,
+          accessibilitySettings: data.accessibility_settings || undefined,
+          careerProfile: data.career_profile || undefined,
+          privacySettings: data.privacy_settings || undefined,
+          createdAt: data.created_at || new Date().toISOString(),
+          updatedAt: data.updated_at || new Date().toISOString(),
+        } as Partial<UserProfile>;
+      }
+    }
+
+    return demoProfiles.get(userId) || { id: userId, careerProfile: { skills: [], interests: [], targetRoles: [] } as any };
+  }
+
+  private getProfileSkills(profile: Partial<UserProfile>): string[] {
+    const skills = profile.careerProfile?.skills || [];
+    return skills
+      .map((skill) => (typeof skill === 'string' ? skill : skill?.name))
+      .filter((skill): skill is string => Boolean(skill));
+  }
+
+  private async loadCandidateJobs(query: string) {
+    try {
+      const result = await this.jobService.searchJobs({
+        query,
+        page: 1,
+        limit: 5,
+      });
+      if (result.jobs.length) return result.jobs;
+
+      const fallback = await this.jobService.searchJobs({
+        page: 1,
+        limit: 5,
+      });
+      return fallback.jobs;
+    } catch {
+      return [];
+    }
+  }
 
   async createAssessment(userId: string): Promise<Assessment> {
     const supabase = getOptionalSupabaseAdmin();
     const openingMessage =
-      "Hi, I am the Assessment Orchestrator. I will combine signals from Profile, Jobs, Roadmaps, Interviews, Confidence, and Simulation into one clear career direction. Tell me your goal, current skills, and what support you need most right now.";
+      'Xin chào, tôi là Assessment Agent. Hãy cho tôi biết mục tiêu nghề nghiệp của bạn; nếu đã có vị trí cụ thể, hãy paste JD để tôi phân tích khoảng trống kỹ năng thật và điều phối Jobs, Profile, Roadmap, Interview cho đúng trọng tâm.';
 
     if (supabase) {
       const { data, error } = await supabase
@@ -134,7 +192,7 @@ export class AssessmentService {
     assessmentId: string,
     userId: string,
     data: { message: string; extractedData?: Conversation['extractedData'] }
-  ): Promise<{ assessment: Assessment; response: string }> {
+  ): Promise<{ assessment: Assessment; response: string; orchestration?: OrchestrationPlan }> {
     const assessment = await this.getAssessment(assessmentId, userId);
     if (!assessment) throw new Error('Assessment not found');
 
@@ -145,27 +203,37 @@ export class AssessmentService {
       timestamp: new Date(),
       extractedData: data.extractedData,
     };
-
-    const aiContent = await this.aiService.chat(userId, data.message, {
+    const [userProfile, candidateJobs] = await Promise.all([
+      this.loadUserProfile(userId),
+      this.loadCandidateJobs(data.message),
+    ]);
+    const orchestrated = await this.aiService.orchestrateAssessment(userId, data.message, {
       agentId: 'assessment',
       routePath: '/assessment',
-      moduleTitle: 'Assessment',
-      moduleScope: 'Synthesize specialist agents into one career direction',
+      moduleTitle: 'Đánh giá nghề nghiệp',
+      moduleScope: 'Phân tích JD, hồ sơ, khoảng trống kỹ năng, lộ trình và phỏng vấn',
       moduleContext: {
         assessmentStatus: assessment.status,
         userMessageCount: assessment.conversations.filter((message) => message.role === 'user').length,
+        userProfile,
+        profileSkills: this.getProfileSkills(userProfile),
+        candidateJobs,
       },
       history: assessment.conversations.map((message) => ({
         role: message.role,
         content: message.content,
       })),
     });
+    const aiContent = orchestrated.response;
 
     const aiResponse: Conversation = {
       id: createId('conv'),
       role: 'assistant',
       content: aiContent,
       timestamp: new Date(),
+      extractedData: {
+        orchestration: orchestrated.orchestration,
+      },
     };
 
     const supabase = getOptionalSupabaseAdmin();
@@ -183,12 +251,13 @@ export class AssessmentService {
           user_id: userId,
           role: 'assistant',
           content: aiResponse.content,
+          extracted_data: aiResponse.extractedData || null,
         },
       ]);
       if (error) throw error;
 
       const updated = await this.getAssessment(assessmentId, userId);
-      return { assessment: updated!, response: aiContent };
+      return { assessment: updated!, response: aiContent, orchestration: orchestrated.orchestration };
     }
 
     const updated: Assessment = {
@@ -196,7 +265,7 @@ export class AssessmentService {
       conversations: [...assessment.conversations, userMessage, aiResponse],
     };
     demoAssessments.set(assessmentId, updated);
-    return { assessment: updated, response: aiContent };
+    return { assessment: updated, response: aiContent, orchestration: orchestrated.orchestration };
   }
 
   async completeAssessment(id: string, userId: string): Promise<Assessment> {

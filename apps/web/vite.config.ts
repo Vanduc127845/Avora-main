@@ -33,12 +33,31 @@ export default defineConfig(({ mode }) => {
           assetFileNames: 'assets/[name]-[hash][extname]',
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-                return 'vendor';
+              if (id.includes('react-native') || id.includes('expo')) {
+                return 'native-compat';
+              }
+              if (id.includes('lucide-react')) {
+                return 'icons';
+              }
+              if (id.includes('framer-motion')) {
+                return 'motion';
+              }
+              if (id.includes('@supabase')) {
+                return 'supabase';
+              }
+              if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
+                return 'forms';
+              }
+              if (id.includes('i18next') || id.includes('date-fns')) {
+                return 'intl';
               }
               if (id.includes('@tanstack')) {
                 return 'ai';
               }
+              if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+                return 'react-vendor';
+              }
+              return 'vendor';
             }
           },
         },

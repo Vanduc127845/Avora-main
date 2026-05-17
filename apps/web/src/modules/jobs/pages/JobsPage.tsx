@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, Button } from '../../../components/ui';
 import { Search, Filter, MapPin, Building2, DollarSign, ArrowRight, Bookmark, Share2, Loader2 } from 'lucide-react';
 import { formatCurrency } from '../../../utils/helpers';
-import { handleApiError, jobService } from '../../../services';
+import { handleApiError, isRequestCanceled, jobService } from '../../../services';
 import type { Job } from '../../../lib/shared';
 
 const salaryLabel = (job: Job) => {
@@ -28,34 +28,56 @@ export default function JobsPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const loadJobs = React.useCallback(async () => {
+  React.useEffect(() => {
+    let active = true;
+
+    const loadSavedJobs = async () => {
+      try {
+        const response = await jobService.getSavedJobs({ cacheTtlMs: 30_000 });
+        if (active) setSavedJobs(new Set(response.jobs.map((job) => job.id)));
+      } catch (err) {
+        if (active && !isRequestCanceled(err)) setError(handleApiError(err).error);
+      }
+    };
+
+    loadSavedJobs();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const loadJobs = React.useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const [jobsResponse, savedResponse] = await Promise.all([
-        jobService.searchJobs({
+      const jobsResponse = await jobService.searchJobs(
+        {
           query: searchQuery || undefined,
           remote: remoteOnly || undefined,
           disabilityFriendly: accessibilityFriendly || undefined,
           limit: 20,
-        }),
-        jobService.getSavedJobs().catch(() => ({ jobs: [] })),
-      ]);
+        },
+        { signal, dedupe: false, cacheTtlMs: 20_000 }
+      );
 
       setJobs(jobsResponse.jobs);
-      setSavedJobs(new Set(savedResponse.jobs.map((job) => job.id)));
     } catch (err) {
+      if (isRequestCanceled(err)) return;
       const apiError = handleApiError(err);
       setError(apiError.message || apiError.error);
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) setIsLoading(false);
     }
   }, [accessibilityFriendly, remoteOnly, searchQuery]);
 
   React.useEffect(() => {
-    const timer = window.setTimeout(loadJobs, 250);
-    return () => window.clearTimeout(timer);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => loadJobs(controller.signal), 450);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [loadJobs]);
 
   const toggleSave = async (id: string) => {

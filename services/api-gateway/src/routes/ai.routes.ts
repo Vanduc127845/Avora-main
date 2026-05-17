@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 import { AppError } from '../middleware/error.middleware.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
+import { aiRouteLimiter } from '../middleware/rate-limit.middleware.js';
 import { AIService } from '../services/ai.service.js';
 
 const router: Router = Router();
@@ -18,6 +19,7 @@ router.get('/status', (_req: Request, res: Response) => {
 });
 
 router.post('/chat',
+  aiRouteLimiter,
   authMiddleware,
   body('message').notEmpty().trim(),
   body('context').optional().isObject(),
@@ -39,6 +41,7 @@ router.post('/chat',
 );
 
 router.post('/analyze-jd',
+  aiRouteLimiter,
   authMiddleware,
   body('jobDescription').notEmpty(),
   body('userProfile').optional().isObject(),
@@ -59,6 +62,7 @@ router.post('/analyze-jd',
 );
 
 router.post('/generate-roadmap',
+  aiRouteLimiter,
   authMiddleware,
   body('targetJobId').notEmpty(),
   body('currentSkills').isArray(),
@@ -80,6 +84,7 @@ router.post('/generate-roadmap',
 );
 
 router.post('/suggest-careers',
+  aiRouteLimiter,
   authMiddleware,
   body('interests').isArray(),
   body('skills').isArray(),
@@ -101,6 +106,7 @@ router.post('/suggest-careers',
 );
 
 router.post('/generate-questions',
+  aiRouteLimiter,
   authMiddleware,
   body('jobType').notEmpty(),
   body('difficulty').optional().isIn(['easy', 'medium', 'hard']),
@@ -122,6 +128,7 @@ router.post('/generate-questions',
 );
 
 router.post('/feedback',
+  aiRouteLimiter,
   authMiddleware,
   body('responses').isArray(),
   body('jobType').optional().isString(),

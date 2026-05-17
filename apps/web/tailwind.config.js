@@ -74,19 +74,18 @@ export default {
         },
       },
       fontFamily: {
-        // Display - DM Serif for headings
-        display: ['DM Serif Display', 'Georgia', 'serif'],
-        // Body - DM Sans for readable body text
-        sans: ['DM Sans', 'system-ui', 'sans-serif'],
+        // Vietnamese-safe UI type
+        display: ['Be Vietnam Pro', 'Segoe UI', 'system-ui', 'sans-serif'],
+        sans: ['Be Vietnam Pro', 'Segoe UI', 'system-ui', 'sans-serif'],
         // Mono - for code/technical
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       fontSize: {
-        // Fluid heading scale
-        'display-xl': ['clamp(2.5rem, 5vw, 4rem)', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '600' }],
-        'display-lg': ['clamp(2rem, 4vw, 3rem)', { lineHeight: '1.15', letterSpacing: '-0.01em', fontWeight: '600' }],
-        'display-md': ['clamp(1.5rem, 3vw, 2rem)', { lineHeight: '1.2', fontWeight: '600' }],
-        'display-sm': ['clamp(1.25rem, 2vw, 1.5rem)', { lineHeight: '1.3', fontWeight: '600' }],
+        // Stable heading scale
+        'display-xl': ['3.75rem', { lineHeight: '1.1', letterSpacing: '0', fontWeight: '700' }],
+        'display-lg': ['3rem', { lineHeight: '1.15', letterSpacing: '0', fontWeight: '700' }],
+        'display-md': ['2rem', { lineHeight: '1.2', letterSpacing: '0', fontWeight: '700' }],
+        'display-sm': ['1.5rem', { lineHeight: '1.3', letterSpacing: '0', fontWeight: '700' }],
       },
       spacing: {
         18: '4.5rem',

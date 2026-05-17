@@ -52,6 +52,10 @@ export default function AvoraChatWidget() {
     }));
   };
 
+  const emitAgentStatus = (agentId: AgentId, status: 'thinking' | 'done' | 'error') => {
+    window.dispatchEvent(new CustomEvent('avora:agent-status', { detail: { agentId, status } }));
+  };
+
   const sendMessage = async () => {
     const content = input.trim();
     if (!content || isSending) return;
@@ -67,6 +71,7 @@ export default function AvoraChatWidget() {
     setInput('');
     setError(null);
     setIsSending(true);
+    emitAgentStatus(activeAgent.id, 'thinking');
 
     try {
       const response = await post<{ response: string }>('/api/ai/chat', {
@@ -91,9 +96,11 @@ export default function AvoraChatWidget() {
           content: response.response,
         },
       ]);
+      emitAgentStatus(activeAgent.id, 'done');
     } catch (err) {
       const apiError = handleApiError(err);
       setError(apiError.message || apiError.error);
+      emitAgentStatus(activeAgent.id, 'error');
     } finally {
       setIsSending(false);
     }
@@ -117,7 +124,7 @@ export default function AvoraChatWidget() {
               type="button"
               onClick={() => setIsOpen(false)}
               className="rounded-lg p-2 text-stone-500 hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-              aria-label="Close Avora AI chat"
+              aria-label="Đóng chat AI Avora"
             >
               <X className="h-5 w-5" />
             </button>
@@ -141,7 +148,7 @@ export default function AvoraChatWidget() {
             {isSending && (
               <div className="flex items-center gap-2 text-sm text-stone-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>{agent.agentName} is thinking...</span>
+                <span>{agent.agentName} đang suy nghĩ...</span>
               </div>
             )}
           </div>
@@ -163,7 +170,7 @@ export default function AvoraChatWidget() {
                     sendMessage();
                   }
                 }}
-                placeholder={`Ask ${agent.agentName}...`}
+                placeholder={`Hỏi ${agent.agentName}...`}
                 className="input flex-1"
                 disabled={isSending}
               />
@@ -172,7 +179,7 @@ export default function AvoraChatWidget() {
                 onClick={sendMessage}
                 disabled={isSending || !input.trim()}
                 className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label={`Send message to ${agent.agentName}`}
+                aria-label={`Gửi tin nhắn cho ${agent.agentName}`}
               >
                 <Send className="h-5 w-5" />
               </button>
@@ -185,7 +192,7 @@ export default function AvoraChatWidget() {
         type="button"
         onClick={() => setIsOpen((value) => !value)}
         className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-600 text-white shadow-xl hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
-        aria-label={`Open ${agent.agentName} chat`}
+        aria-label={`Mở chat ${agent.agentName}`}
       >
         {isOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
       </button>

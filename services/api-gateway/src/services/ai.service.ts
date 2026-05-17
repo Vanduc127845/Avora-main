@@ -3,11 +3,16 @@ import type {
   InterviewFeedback,
   InterviewQuestion,
   JDAnalysis,
+  Job,
   JobFitAnalysis,
+  OrchestrationPlan,
   Roadmap,
+  UserProfile,
 } from '../types/shared.js';
+import { AGENT_PROMPTS, AGENT_TOOLS, SYSTEM_PROMPT } from '../config/agent-prompts.js';
 import { createId } from '../data/demo-store.js';
 import { logger } from '../utils/logger.js';
+import { AgentMemoryService } from './agent-memory.service.js';
 
 type ChatMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -23,6 +28,16 @@ type ChatContext = {
   moduleContext?: Record<string, unknown>;
 };
 
+type CandidateJob = Pick<Job, 'id' | 'source' | 'url' | 'basic' | 'details' | 'accessibility'>;
+
+type SkillGap = {
+  skill: string;
+  priority: 'High' | 'Medium' | 'Low';
+  reason: string;
+  resource: string;
+  output: string;
+};
+
 type AIProvider = 'azure-openai' | 'openai' | 'groq' | 'ollama' | 'demo-fallback';
 
 type AIStatus = {
@@ -33,33 +48,21 @@ type AIStatus = {
   missingEnv: string[];
 };
 
-const SYSTEM_PROMPT =
-  'You are Avora, a practical AI career copilot for people with disabilities. Be respectful, privacy-preserving, strengths-based, and concrete. Do not make medical or legal claims. Prefer plain language and actionable next steps.';
+export class AIRateLimitError extends Error {
+  statusCode = 429;
+  code = 'AI_RATE_LIMITED';
+  source = 'ai-provider';
+  isOperational = true;
 
-const AGENT_PROMPTS: Record<string, string> = {
-  dashboard:
-    'You are the Dashboard Agent. Focus on progress, priorities, blockers, and the next best action across Avora. Keep answers short and operational.',
-  profile:
-    'You are the Profile Agent. Focus on skills, strengths, access needs, work preferences, disclosure boundaries, and profile completeness. Do not diagnose medical conditions.',
-  assessment:
-    'You are the Assessment Orchestrator Agent. Synthesize signals from all specialist agents: Profile, Jobs, Roadmaps, Interviews, Confidence, Simulation, Settings, and Dashboard. Break complex user needs into specialist findings, then give one clear final recommendation. Ask for missing information only when it blocks a useful answer.',
-  jobs:
-    'You are the Jobs Agent. Focus on selected roles, job requirements, missing skills, accessibility signals, application readiness, and job-specific next steps. Avoid generic career advice.',
-  roadmaps:
-    'You are the Roadmap Agent. Focus on learning sequence, skill gaps, weekly plan, portfolio proof, pacing, and accessibility-friendly study structure.',
-  interviews:
-    'You are the Interview Agent. Focus on role-specific mock interview questions, STAR answers, technical drills, feedback, and accommodation request scripts.',
-  confidence:
-    'You are the Confidence Agent. Focus on self-advocacy, communication scripts, anxiety-reducing next steps, boundaries, and strengths-based reflection. Stay practical.',
-  simulation:
-    'You are the Simulation Agent. Focus on realistic workplace scenarios, choices, consequences, scripts, and safe practice. Keep the scenario concrete.',
-  settings:
-    'You are the Settings Agent. Focus on app settings, accessibility preferences, notifications, privacy, language, and setup troubleshooting.',
-  help:
-    'You are the Help Agent. Focus on documentation, setup, feature navigation, installation, and explaining how Avora works.',
-  general:
-    'You are the General Routing Agent. Identify which Avora specialist should handle the request, answer if simple, and suggest the right navigation area.',
-};
+  constructor(
+    public provider: Exclude<AIProvider, 'demo-fallback'>,
+    public retryAfterMs: number,
+    message = 'The AI service is temporarily busy. Please try again shortly.'
+  ) {
+    super(message);
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
 
 const inferAgentId = (context?: ChatContext) => {
   if (context?.agentId && AGENT_PROMPTS[context.agentId]) return context.agentId;
@@ -80,19 +83,20 @@ const inferAgentId = (context?: ChatContext) => {
 const buildAgentSystemPrompt = (context?: ChatContext) => {
   const agentId = inferAgentId(context);
   const moduleLine = context?.moduleTitle
-    ? `Current Avora module: ${context.moduleTitle}. Scope: ${context.moduleScope || 'not specified'}.`
-    : `Current Avora module route: ${context?.routePath || 'unknown'}.`;
+    ? `Module Avora hiện tại: ${context.moduleTitle}. Phạm vi: ${context.moduleScope || 'chưa xác định'}.`
+    : `Đường dẫn module Avora hiện tại: ${context?.routePath || 'không rõ'}.`;
   const extraContext = context?.moduleContext
-    ? `Module context JSON: ${JSON.stringify(context.moduleContext)}`
+    ? `Ngữ cảnh module dạng JSON: ${JSON.stringify(context.moduleContext)}`
     : '';
 
   return [
     SYSTEM_PROMPT,
     AGENT_PROMPTS[agentId] || AGENT_PROMPTS.general,
+    `Công cụ chuyên môn có thể dùng: ${(AGENT_TOOLS[agentId] || AGENT_TOOLS.general).join(', ')}.`,
     moduleLine,
     extraContext,
-    'You are one specialist in a multi-agent product. Stay in your scope. If another specialist is needed, name that agent and explain the handoff in one sentence.',
-    'When the user asks in Vietnamese, answer in Vietnamese. Otherwise use the user language.',
+    'Bạn là một chuyên gia trong sản phẩm multi-agent. Hãy ở đúng phạm vi; nếu cần agent khác, hãy nêu tên agent đó và nói rõ dữ liệu sẽ bàn giao.',
+    'Luôn trả lời bằng tiếng Việt theo mặc định, trừ khi người dùng yêu cầu rõ một ngôn ngữ khác.',
   ]
     .filter(Boolean)
     .join('\n');
@@ -102,6 +106,14 @@ const asArray = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 
 const isVietnameseMessage = (value: string) =>
+  /\b(toi|ban|minh|em|anh|chi|chon|viec|nghe|hoc|phong van|khuyet tat|ho tro|dang|can|thieu|bo sung|lap trinh|lo trinh|ke hoach|cong viec)\b/i.test(
+    value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .toLowerCase()
+  ) ||
   /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(value) ||
   /\b(toi|ban|minh|viec|nghe|hoc|phong van|khuyet tat|ho tro|dang|can)\b/i.test(value);
 
@@ -109,6 +121,8 @@ const normalizeVietnamese = (value: string) =>
   value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
     .replace(/đ/g, 'd')
     .replace(/Đ/g, 'D')
     .toLowerCase();
@@ -135,6 +149,27 @@ const clampNumber = (value: unknown, min: number, max: number, fallback: number)
   if (!Number.isFinite(numberValue)) return fallback;
   return Math.min(max, Math.max(min, Math.round(numberValue)));
 };
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const parseRetryAfterMs = (headers: Headers): number | null => {
+  const retryAfter = headers.get('retry-after');
+  if (!retryAfter) return null;
+
+  const seconds = Number(retryAfter);
+  if (Number.isFinite(seconds)) return Math.max(0, Math.round(seconds * 1000));
+
+  const retryAt = Date.parse(retryAfter);
+  if (Number.isFinite(retryAt)) return Math.max(0, retryAt - Date.now());
+
+  return null;
+};
+
+const getProviderRetryConfig = () => ({
+  maxRetries: clampNumber(process.env.AI_PROVIDER_MAX_RETRIES, 0, 3, 1),
+  baseDelayMs: clampNumber(process.env.AI_PROVIDER_RETRY_BASE_MS, 200, 2000, 700),
+  maxDelayMs: clampNumber(process.env.AI_PROVIDER_RETRY_MAX_MS, 500, 5000, 2500),
+});
 
 const uniqueStrings = (values: string[]) =>
   [...new Set(values.map((value) => value.trim()).filter(Boolean))];
@@ -190,6 +225,284 @@ const hasSkillMatch = (skill: string, userSkills: string[]) => {
   });
 };
 
+const AGENT_DISPLAY_NAMES: Record<string, string> = {
+  profile: 'Profile Agent',
+  jobs: 'Jobs Agent',
+  roadmaps: 'Roadmap Agent',
+  interviews: 'Interview Agent',
+  confidence: 'Confidence Agent',
+  simulation: 'Simulation Agent',
+  assessment: 'Assessment Agent',
+};
+
+const ADDRESSED_AGENT_ALIASES: Record<string, string> = {
+  dashboard: 'dashboard',
+  'dashboard agent': 'dashboard',
+  profile: 'profile',
+  'profile agent': 'profile',
+  assessment: 'assessment',
+  'assessment agent': 'assessment',
+  jobs: 'jobs',
+  'job agent': 'jobs',
+  'jobs agent': 'jobs',
+  roadmap: 'roadmaps',
+  roadmaps: 'roadmaps',
+  'roadmap agent': 'roadmaps',
+  interview: 'interviews',
+  interviews: 'interviews',
+  'interview agent': 'interviews',
+  confidence: 'confidence',
+  'confidence agent': 'confidence',
+  simulation: 'simulation',
+  'simulation agent': 'simulation',
+  settings: 'settings',
+  'settings agent': 'settings',
+  help: 'help',
+  'help agent': 'help',
+};
+
+const parseAddressedAgent = (message: string): { agentId: string; content: string } | null => {
+  const match = message.match(/^\s*([A-Za-z ]{3,28}|[\p{L}\s]{3,28})\s*:\s*(.+)$/u);
+  if (!match) return null;
+  const alias = normalizeVietnamese(match[1]).replace(/\s+/g, ' ').trim();
+  const agentId = ADDRESSED_AGENT_ALIASES[alias];
+  return agentId ? { agentId, content: match[2].trim() } : null;
+};
+
+const asRecordValue = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+
+const readStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.map((item) => String(item || '').trim()).filter(Boolean) : [];
+
+const readCandidateJobs = (context?: ChatContext): CandidateJob[] => {
+  const jobs = context?.moduleContext?.candidateJobs;
+  return Array.isArray(jobs) ? jobs.filter((job): job is CandidateJob => Boolean(job && typeof job === 'object')) : [];
+};
+
+const readUserProfile = (context?: ChatContext): UserProfile | Record<string, unknown> | null => {
+  const profile = context?.moduleContext?.userProfile;
+  return profile && typeof profile === 'object' ? profile as UserProfile : null;
+};
+
+const contextProfileSkills = (context?: ChatContext): string[] =>
+  uniqueStrings([
+    ...readStringArray(context?.moduleContext?.profileSkills),
+    ...extractUserSkillNames(readUserProfile(context)),
+  ]);
+
+const combineConversationText = (message: string, context?: ChatContext) =>
+  [
+    ...(context?.history || []).slice(-8).map((item) => item.content),
+    message,
+  ].join('\n\n');
+
+const looksLikeJobDescription = (value: string) => {
+  const normalized = normalizeVietnamese(value);
+  const hasMarker =
+    /\b(jd|job description|requirements|responsibilities|skills|benefits)\b/i.test(value) ||
+    /\b(mo ta cong viec|yeu cau cong viec|yeu cau ung vien|trach nhiem|ky nang bat buoc|ky nang yeu cau|phuc loi|quyen loi)\b/i.test(normalized);
+  return value.trim().length >= 120 && hasMarker;
+};
+
+const extractPastedJD = (message: string, context?: ChatContext): string | null => {
+  const chunks = [
+    message,
+    ...(context?.history || [])
+      .slice(-8)
+      .reverse()
+      .filter((item) => item.role === 'user')
+      .map((item) => item.content),
+  ];
+  return chunks.find((chunk) => looksLikeJobDescription(chunk))?.trim() || null;
+};
+
+const detectRole = (text: string): string | undefined => {
+  const normalized = normalizeVietnamese(text);
+  const raw = text.toLowerCase();
+  if (/\b(frontend|front-end|fe|react|ui developer|web developer)\b/i.test(raw) || normalized.includes('lap trinh web')) {
+    return 'Frontend Developer';
+  }
+  if (/customer support|support specialist|helpdesk/i.test(raw) || normalized.includes('ho tro khach hang')) {
+    return 'Customer Support Specialist';
+  }
+  if (/data analyst|excel|sql|power bi|analytics/i.test(raw) || normalized.includes('phan tich du lieu')) {
+    return 'Data Analyst Assistant';
+  }
+  if (/qa|tester|testing|accessibility tester/i.test(raw) || normalized.includes('kiem thu')) {
+    return 'Accessibility QA Tester';
+  }
+  if (/backend|node|express|api developer/i.test(raw)) {
+    return 'Backend Developer';
+  }
+  const roleMatch = text.match(/(?:vị trí|vi tri|role|job)\s+([A-Za-zÀ-ỹ0-9 .+#-]{4,60})/i);
+  return roleMatch?.[1]?.trim();
+};
+
+const scoreCandidateJob = (job: CandidateJob, text: string, role?: string) => {
+  const haystack = skillKey(
+    [
+      job.basic?.title,
+      job.basic?.company,
+      job.details?.description,
+      ...(job.details?.requirements?.skills || []),
+    ].filter(Boolean).join(' ')
+  );
+  const needles = skillKey([text, role || ''].join(' '))
+    .split(' ')
+    .filter((part) => part.length > 2);
+
+  return needles.reduce((score, part) => score + (haystack.includes(part) ? 1 : 0), 0);
+};
+
+const selectCandidateJob = (jobs: CandidateJob[], text: string, role?: string): CandidateJob | null => {
+  if (!jobs.length) return null;
+  const scored = jobs
+    .map((job) => ({ job, score: scoreCandidateJob(job, text, role) }))
+    .sort((left, right) => right.score - left.score);
+  if (scored[0]?.score > 0) return scored[0].job;
+  return role && jobs.length === 1 ? jobs[0] : null;
+};
+
+const KNOWN_SKILLS = [
+  'React',
+  'TypeScript',
+  'JavaScript',
+  'HTML',
+  'CSS',
+  'Git',
+  'REST API',
+  'API integration',
+  'Form validation',
+  'Accessibility basics',
+  'WCAG',
+  'ARIA',
+  'Responsive design',
+  'Node.js',
+  'Express',
+  'SQL',
+  'Excel or Google Sheets',
+  'Clear writing',
+  'Problem solving',
+  'Customer empathy',
+];
+
+const extractSkillsFromJDText = (jdText: string): string[] => {
+  const explicitLines = jdText
+    .split(/\r?\n/)
+    .filter((line) => /(skill|kỹ năng|ky nang|requirement|yêu cầu|yeu cau)/i.test(line))
+    .flatMap((line) => line.split(/[:;,|•-]/).map((item) => item.trim()))
+    .filter((item) => item.length > 2 && item.length < 50);
+
+  const detected = KNOWN_SKILLS.filter((skill) => {
+    const key = skillKey(skill);
+    return skillKey(jdText).includes(key);
+  });
+
+  return uniqueStrings([...detected, ...explicitLines])
+    .filter((skill) => !/^(skills?|requirements?|ky nang|yeu cau|kỹ năng|yêu cầu)$/i.test(skill))
+    .slice(0, 10);
+};
+
+const formatJobDescription = (job: CandidateJob) =>
+  [
+    `Vị trí: ${job.basic.title}`,
+    `Công ty: ${job.basic.company}`,
+    `Nguồn: ${job.source || 'Avora Jobs'}${job.url ? ` - ${job.url}` : ''}`,
+    `Mô tả: ${job.details.description}`,
+    `Trách nhiệm: ${job.details.responsibilities.join('; ')}`,
+    `Yêu cầu kỹ năng: ${job.details.requirements.skills.join(', ')}`,
+    `Kinh nghiệm: ${job.details.requirements.experience || 'Không nêu rõ'}`,
+    `Trợ năng: ${job.accessibility.features.join(', ') || 'Không nêu rõ'}`,
+  ].join('\n');
+
+const resourceForSkill = (skill: string) => {
+  const key = skillKey(skill);
+  if (key.includes('react')) return 'React Docs - Learn React: https://react.dev/learn';
+  if (key.includes('typescript')) return 'TypeScript Handbook: https://www.typescriptlang.org/docs/handbook/intro.html';
+  if (key.includes('javascript')) return 'MDN JavaScript Guide: https://developer.mozilla.org/docs/Web/JavaScript/Guide';
+  if (key.includes('html')) return 'MDN HTML Learn: https://developer.mozilla.org/docs/Learn/HTML';
+  if (key.includes('css') || key.includes('responsive')) return 'web.dev Learn CSS: https://web.dev/learn/css';
+  if (key.includes('git')) return 'Pro Git Book: https://git-scm.com/book/en/v2';
+  if (key.includes('accessibility') || key.includes('wcag') || key.includes('aria')) {
+    return 'web.dev Learn Accessibility: https://web.dev/learn/accessibility';
+  }
+  if (key.includes('api') || key.includes('rest')) return 'MDN Fetch API: https://developer.mozilla.org/docs/Web/API/Fetch_API';
+  if (key.includes('form')) return 'React form validation practice project';
+  if (key.includes('sql')) return 'SQLBolt: https://sqlbolt.com';
+  if (key.includes('excel') || key.includes('sheets')) return 'Google Sheets training: https://support.google.com/a/users/answer/9282959';
+  return `Dự án thực hành nhỏ chứng minh kỹ năng ${skill}`;
+};
+
+const outputForSkill = (skill: string, role: string) => {
+  const key = skillKey(skill);
+  if (key.includes('react')) return `Một component ${role} dùng props, state và xử lý lỗi rõ ràng.`;
+  if (key.includes('typescript')) return 'Chuyển một màn hình JavaScript sang TypeScript có type cho props và API response.';
+  if (key.includes('api') || key.includes('rest')) return 'Một trang gọi API thật, xử lý loading/error/empty state.';
+  if (key.includes('accessibility') || key.includes('wcag') || key.includes('aria')) {
+    return 'Checklist kiểm thử keyboard, label, focus state và contrast cho một màn hình.';
+  }
+  if (key.includes('git')) return 'Một pull request mẫu có branch, commit rõ ràng và mô tả thay đổi.';
+  return `Một bài tập hoặc mini project chứng minh ${skill} trong bối cảnh ${role}.`;
+};
+
+const buildSkillGaps = (requiredSkills: string[], userSkills: string[], role: string): SkillGap[] =>
+  requiredSkills
+    .filter((skill) => !hasSkillMatch(skill, userSkills))
+    .map((skill, index) => ({
+      skill,
+      priority: index < 3 ? 'High' : index < 6 ? 'Medium' : 'Low',
+      reason: `JD yêu cầu ${skill}, nhưng hồ sơ hiện tại chưa có bằng chứng rõ ràng cho kỹ năng này.`,
+      resource: resourceForSkill(skill),
+      output: outputForSkill(skill, role),
+    }));
+
+const buildWeeklyRoadmap = (gaps: SkillGap[], role: string): NonNullable<OrchestrationPlan['summaryCard']>['weeklyRoadmap'] =>
+  gaps.slice(0, 4).map((gap, index) => ({
+    week: `Tuần ${index + 1}`,
+    skill: gap.skill,
+    resource: gap.resource,
+    output: gap.output || `Sản phẩm nhỏ chứng minh ${gap.skill} cho vị trí ${role}.`,
+  }));
+
+const buildInterviewQuestions = (role: string, gaps: SkillGap[], requiredSkills: string[]) => {
+  const focus = gaps.length ? gaps : requiredSkills.slice(0, 3).map((skill) => ({
+    skill,
+    priority: 'Medium' as const,
+    reason: '',
+    resource: '',
+    output: '',
+  }));
+  return focus.slice(0, 3).map((gap, index) => {
+    if (index === 0) return `Trong JD ${role}, ${gap.skill} là yêu cầu quan trọng. Bạn hãy mô tả một project hoặc bài tập đã dùng ${gap.skill}.`;
+    if (index === 1) return `Nếu gặp bug liên quan đến ${gap.skill}, bạn sẽ debug theo các bước nào và báo cáo kết quả ra sao?`;
+    return `Bạn sẽ học và chứng minh ${gap.skill} trong 2-4 tuần như thế nào trước khi ứng tuyển vị trí này?`;
+  });
+};
+
+const traceFor = (
+  agentId: string,
+  status: OrchestrationPlan['agentTraces'][number]['status'],
+  summary: string,
+  evidence: string[],
+  handoff: string,
+  actions: string[],
+  confidence: number,
+  rawOutput?: string,
+  runtimeStatus: NonNullable<OrchestrationPlan['agentTraces'][number]['runtimeStatus']> = status === 'error' ? 'error' : 'done'
+): OrchestrationPlan['agentTraces'][number] => ({
+  agentId,
+  agentName: AGENT_DISPLAY_NAMES[agentId] || agentId,
+  status,
+  runtimeStatus,
+  summary,
+  evidence,
+  handoff,
+  rawOutput,
+  confidence,
+  actions,
+});
+
 export class AIService {
   private endpoint = (process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/$/, '');
   private apiKey = process.env.AZURE_OPENAI_API_KEY || '';
@@ -205,6 +518,11 @@ export class AIService {
   private ollamaBaseUrl = (process.env.OLLAMA_BASE_URL || '').replace(/\/$/, '');
   private ollamaModel = process.env.OLLAMA_MODEL || 'llama3.1:8b';
   private fallbackEnabled = process.env.AI_ENABLE_DEMO_FALLBACK !== 'false';
+  private memoryService = new AgentMemoryService();
+
+  private canUseFallback(): boolean {
+    return this.fallbackEnabled || process.env.NODE_ENV !== 'production';
+  }
 
   private refreshConfig() {
     this.endpoint = (process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/$/, '');
@@ -248,7 +566,7 @@ export class AIService {
       return {
         provider: 'azure-openai',
         configured: true,
-        fallbackEnabled: this.fallbackEnabled,
+        fallbackEnabled: this.canUseFallback(),
         model: this.deployment,
         missingEnv: [],
       };
@@ -258,7 +576,7 @@ export class AIService {
       return {
         provider: 'openai',
         configured: true,
-        fallbackEnabled: this.fallbackEnabled,
+        fallbackEnabled: this.canUseFallback(),
         model: this.openAIModel,
         missingEnv: [],
       };
@@ -268,7 +586,7 @@ export class AIService {
       return {
         provider: 'groq',
         configured: true,
-        fallbackEnabled: this.fallbackEnabled,
+        fallbackEnabled: this.canUseFallback(),
         model: this.groqModel,
         missingEnv: [],
       };
@@ -278,7 +596,7 @@ export class AIService {
       return {
         provider: 'ollama',
         configured: true,
-        fallbackEnabled: this.fallbackEnabled,
+        fallbackEnabled: this.canUseFallback(),
         model: this.ollamaModel,
         missingEnv: [],
       };
@@ -288,7 +606,7 @@ export class AIService {
       return {
         provider: 'demo-fallback',
         configured: false,
-        fallbackEnabled: this.fallbackEnabled,
+        fallbackEnabled: this.canUseFallback(),
         model: null,
         missingEnv: [
           ...(!hasGroqKey ? ['GROQ_API_KEY'] : []),
@@ -301,7 +619,7 @@ export class AIService {
       return {
         provider: 'demo-fallback',
         configured: false,
-        fallbackEnabled: this.fallbackEnabled,
+        fallbackEnabled: this.canUseFallback(),
         model: null,
         missingEnv: [
           ...(!hasOllamaBaseUrl ? ['OLLAMA_BASE_URL'] : []),
@@ -314,7 +632,7 @@ export class AIService {
       return {
         provider: 'demo-fallback',
         configured: false,
-        fallbackEnabled: this.fallbackEnabled,
+        fallbackEnabled: this.canUseFallback(),
         model: null,
         missingEnv: [
           ...(!hasOpenAIKey ? ['OPENAI_API_KEY'] : []),
@@ -334,7 +652,7 @@ export class AIService {
     return {
       provider: 'demo-fallback',
       configured: false,
-      fallbackEnabled: this.fallbackEnabled,
+      fallbackEnabled: this.canUseFallback(),
       model: null,
       missingEnv,
     };
@@ -359,22 +677,360 @@ export class AIService {
 
   private useFallback<T>(fallback: () => T): T {
     this.refreshConfig();
-    if (this.fallbackEnabled) return fallback();
+    if (this.canUseFallback()) return fallback();
     throw new Error('AI provider is not configured and demo fallback is disabled.');
   }
 
-  async chat(_userId: string, message: string, context?: ChatContext): Promise<string> {
-    if (this.isConfigured()) {
-      const response = await this.callModel([
-        { role: 'system', content: buildAgentSystemPrompt(context) },
-        ...(context?.history || []).slice(-8),
-        { role: 'user', content: message },
-      ]);
+  private async fetchProvider(
+    provider: Exclude<AIProvider, 'demo-fallback'>,
+    url: string,
+    init: RequestInit
+  ): Promise<Response> {
+    const { maxRetries, baseDelayMs, maxDelayMs } = getProviderRetryConfig();
 
-      if (response) return response;
+    for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+      const response = await fetch(url, init);
+      if (response.status !== 429) return response;
+
+      const retryAfterMs = parseRetryAfterMs(response.headers);
+      const computedDelayMs = Math.min(maxDelayMs, baseDelayMs * 2 ** attempt);
+      const delayMs = Math.min(maxDelayMs, retryAfterMs ?? computedDelayMs);
+
+      if (attempt >= maxRetries) {
+        throw new AIRateLimitError(provider, retryAfterMs ?? computedDelayMs);
+      }
+
+      logger.warn('AI provider rate limited; backing off before retry', {
+        provider,
+        attempt: attempt + 1,
+        retryAfterMs: retryAfterMs ?? null,
+        delayMs,
+      });
+      await sleep(delayMs);
     }
 
-    return this.useFallback(() => this.fallbackChat(message, inferAgentId(context)));
+    throw new AIRateLimitError(provider, maxDelayMs);
+  }
+
+  async chat(userId: string, message: string, context?: ChatContext): Promise<string> {
+    const addressed = parseAddressedAgent(message);
+    const effectiveMessage = addressed?.content || message;
+    const routedContext = addressed
+      ? {
+          ...context,
+          agentId: addressed.agentId,
+          moduleTitle: AGENT_DISPLAY_NAMES[addressed.agentId] || context?.moduleTitle,
+        }
+      : context;
+    const agentId = inferAgentId(routedContext);
+
+    const memoryContext = await this.memoryService.getContext(userId, agentId);
+    const systemPrompt = [
+      buildAgentSystemPrompt(routedContext),
+      memoryContext ? `Bộ nhớ phiên của agent:\n${memoryContext}` : '',
+    ].filter(Boolean).join('\n\n');
+
+    if (this.isConfigured()) {
+      const response = await this.callModel([
+        { role: 'system', content: systemPrompt },
+        ...(routedContext?.history || []).slice(-8),
+        { role: 'user', content: effectiveMessage },
+      ]);
+
+      if (response) {
+        await this.rememberInteraction(userId, agentId, effectiveMessage, response, routedContext);
+        return response;
+      }
+    }
+
+    const fallback = this.useFallback(() => this.fallbackChat(effectiveMessage, agentId));
+    await this.rememberInteraction(userId, agentId, effectiveMessage, fallback, routedContext);
+    return fallback;
+  }
+
+  async orchestrateAssessment(
+    userId: string,
+    message: string,
+    context?: ChatContext
+  ): Promise<{ response: string; orchestration: OrchestrationPlan }> {
+    const agentId = 'assessment';
+    const assessmentContext: ChatContext = { ...context, agentId };
+    const deterministic = this.buildDeterministicAssessment(message, assessmentContext);
+    await this.rememberInteraction(userId, agentId, message, deterministic.response, {
+      ...assessmentContext,
+      moduleContext: {
+        ...(assessmentContext.moduleContext || {}),
+        orchestration: deterministic.orchestration,
+      },
+    });
+    return deterministic;
+  }
+
+  private buildDeterministicAssessment(
+    message: string,
+    context?: ChatContext
+  ): { response: string; orchestration: OrchestrationPlan } {
+    const conversationText = combineConversationText(message, context);
+    const role = detectRole(conversationText);
+    const pastedJD = extractPastedJD(message, context);
+    const candidateJob = selectCandidateJob(readCandidateJobs(context), conversationText, role);
+    const jobTitle = candidateJob?.basic.title || role || 'vị trí mục tiêu';
+    const jdText = candidateJob ? formatJobDescription(candidateJob) : pastedJD;
+    const jdSource = candidateJob
+      ? `${candidateJob.basic.company} - ${candidateJob.basic.title}${candidateJob.url ? ` (${candidateJob.url})` : ''}`
+      : pastedJD
+        ? 'JD người dùng cung cấp trong cuộc trò chuyện'
+        : '';
+    const userSkills = contextProfileSkills(context);
+    const requiredSkills = uniqueStrings(candidateJob?.details.requirements.skills || (jdText ? extractSkillsFromJDText(jdText) : []));
+
+    if (!jdText || requiredSkills.length === 0) {
+      const profileSummary = userSkills.length
+        ? `Hồ sơ hiện có kỹ năng: ${userSkills.slice(0, 8).join(', ')}.`
+        : 'Hồ sơ hiện chưa có kỹ năng nào được xác nhận.';
+      const selectedJob = role || candidateJob?.basic.title;
+      const orchestration: OrchestrationPlan = {
+        intent: 'Thu thập JD thật trước khi phân tích nghề nghiệp',
+        selectedJob,
+        jdSource: '',
+        missingInputs: ['Cần JD thật hoặc chọn một job cụ thể trước khi tính khoảng trống kỹ năng.'],
+        agentTraces: [
+          traceFor(
+            'profile',
+            'complete',
+            profileSummary,
+            userSkills.length ? userSkills.slice(0, 6) : ['Chưa có kỹ năng lưu trong hồ sơ'],
+            'Chuyển hồ sơ hiện tại sang Jobs Agent sau khi có JD.',
+            ['Cập nhật kỹ năng hiện có trong Profile nếu còn thiếu.'],
+            userSkills.length ? 0.78 : 0.48,
+            profileSummary
+          ),
+          traceFor(
+            'jobs',
+            'needs-input',
+            selectedJob
+              ? `Đã nhận mục tiêu ${selectedJob}, nhưng chưa có JD thật để phân tích yêu cầu.`
+              : 'Chưa có vị trí hoặc JD cụ thể để phân tích.',
+            selectedJob ? [`Mục tiêu: ${selectedJob}`] : ['Thiếu JD'],
+            'Cần người dùng paste JD hoặc chọn job trong Jobs để trích xuất yêu cầu thật.',
+            ['Paste JD vào Assessment hoặc mở Jobs để chọn một tin tuyển dụng.'],
+            0.62,
+            'Jobs Agent dừng tại bước yêu cầu JD; chưa tạo skill gap.',
+            'idle'
+          ),
+          traceFor(
+            'roadmaps',
+            'queued',
+            'Chờ Jobs Agent trả về danh sách kỹ năng còn thiếu trước khi tạo lộ trình.',
+            ['Không có skill gap thật'],
+            'Không tạo lộ trình khi chưa có JD và skill gap.',
+            ['Sau khi có gap, tạo lộ trình theo tuần cho từng kỹ năng thiếu.'],
+            0.5,
+            'Roadmap Agent chưa chạy vì thiếu đầu vào gap kỹ năng.',
+            'idle'
+          ),
+          traceFor(
+            'interviews',
+            'queued',
+            'Chờ JD thật để tạo câu hỏi phỏng vấn bám sát yêu cầu công việc.',
+            ['Không có JD'],
+            'Không tạo câu hỏi phỏng vấn chung chung.',
+            ['Sau khi có JD, tạo 3-5 câu hỏi theo yêu cầu thực tế.'],
+            0.5,
+            'Interview Agent chưa chạy vì thiếu JD.',
+            'idle'
+          ),
+        ],
+        nextActions: [
+          {
+            label: 'Dán JD',
+            targetAgent: 'jobs',
+            route: '/assessment',
+            prompt: 'Tôi sẽ paste JD cụ thể vào đây để bạn phân tích khoảng trống kỹ năng.',
+          },
+          {
+            label: 'Tìm job phù hợp',
+            targetAgent: 'jobs',
+            route: '/jobs',
+            prompt: `Jobs Agent: tìm một JD thật phù hợp với ${selectedJob || 'mục tiêu nghề nghiệp của tôi'} rồi phân tích kỹ năng còn thiếu.`,
+          },
+        ],
+        finalRecommendation:
+          'Bạn muốn ứng tuyển vị trí cụ thể nào? Hãy paste JD vào đây, hoặc tôi sẽ tìm JD phù hợp cho bạn. Mình sẽ không tạo lộ trình cho đến khi có JD thật và dữ liệu hồ sơ để so sánh.',
+        generatedAt: new Date().toISOString(),
+      };
+
+      return {
+        response: orchestration.finalRecommendation,
+        orchestration,
+      };
+    }
+
+    const gaps = buildSkillGaps(requiredSkills, userSkills, jobTitle);
+    const matchedSkills = requiredSkills.filter((skill) => hasSkillMatch(skill, userSkills));
+    const roadmap = buildWeeklyRoadmap(gaps, jobTitle);
+    const interviewQuestions = buildInterviewQuestions(jobTitle, gaps, requiredSkills);
+    const topGaps = gaps.slice(0, 3);
+    const profileRaw = userSkills.length
+      ? `Kỹ năng trong hồ sơ: ${userSkills.join(', ')}.`
+      : 'Hồ sơ thật đã đọc nhưng chưa có kỹ năng nào được lưu; mọi kỹ năng trong JD được xem là chưa có bằng chứng.';
+    const jobsRaw = [
+      `JD source: ${jdSource}`,
+      `Required skills: ${requiredSkills.join(', ')}`,
+      `Matched skills: ${matchedSkills.length ? matchedSkills.join(', ') : 'Chưa có kỹ năng khớp rõ ràng'}`,
+      `Missing skills: ${gaps.length ? gaps.map((gap) => `${gap.skill} (${gap.priority})`).join(', ') : 'Chưa phát hiện khoảng trống kỹ năng'}`,
+    ].join('\n');
+    const roadmapRaw = roadmap
+      .map((item) => `${item.week}: ${item.skill} -> ${item.resource} -> ${item.output}`)
+      .join('\n');
+    const interviewRaw = interviewQuestions.map((question, index) => `${index + 1}. ${question}`).join('\n');
+    const nextAction = topGaps.length
+      ? `Bắt đầu với ${topGaps[0].skill}: học tài nguyên được gợi ý và tạo output trong Tuần 1.`
+      : 'Cập nhật thêm kỹ năng và bằng chứng trong Profile, sau đó dùng Jobs Agent để phân tích lại JD.';
+
+    const orchestration: OrchestrationPlan = {
+      intent: `Phân tích JD và khoảng trống kỹ năng cho ${jobTitle}`,
+      selectedJob: jobTitle,
+      jdSource,
+      missingInputs: [],
+      agentTraces: [
+        traceFor(
+          'profile',
+          'complete',
+          userSkills.length
+            ? `Đã đọc ${userSkills.length} kỹ năng từ hồ sơ để so sánh với JD.`
+            : 'Đã đọc hồ sơ thật; hiện chưa có kỹ năng nào được lưu rõ ràng.',
+          userSkills.length ? userSkills.slice(0, 6) : ['Hồ sơ chưa có kỹ năng đã lưu'],
+          'Chuyển kỹ năng hiện có sang Jobs Agent để tính gap.',
+          ['Bổ sung bằng chứng project cho các kỹ năng đã có.'],
+          userSkills.length ? 0.84 : 0.58,
+          profileRaw
+        ),
+        traceFor(
+          'jobs',
+          'complete',
+          gaps.length
+            ? `Đã trích xuất ${requiredSkills.length} kỹ năng từ JD và tìm ${gaps.length} kỹ năng còn thiếu.`
+            : 'Đã trích xuất JD; hồ sơ hiện khớp với các kỹ năng chính được liệt kê.',
+          [`JD: ${jdSource}`, ...topGaps.map((gap) => `${gap.skill}: ${gap.priority}`)].slice(0, 6),
+          'Chuyển danh sách gap ưu tiên sang Roadmap và Interview.',
+          ['Xác nhận top gap trước khi ứng tuyển.', 'Chuẩn bị bằng chứng cho kỹ năng đã khớp.'],
+          0.9,
+          jobsRaw
+        ),
+        traceFor(
+          'roadmaps',
+          'complete',
+          roadmap.length
+            ? `Đã tạo lộ trình theo tuần cho ${roadmap.length} kỹ năng thiếu ưu tiên.`
+            : 'Không tạo lộ trình mới vì chưa có gap rõ ràng từ JD.',
+          roadmap.map((item) => `${item.week}: ${item.skill}`),
+          'Chuyển lộ trình học theo gap sang Assessment để tổng hợp.',
+          roadmap.map((item) => `${item.week}: hoàn thành output cho ${item.skill}`),
+          0.86,
+          roadmapRaw || 'Không có roadmap vì chưa phát hiện gap.'
+        ),
+        traceFor(
+          'interviews',
+          'complete',
+          `Đã tạo ${interviewQuestions.length} câu hỏi phỏng vấn bám theo JD ${jobTitle}.`,
+          interviewQuestions.slice(0, 3),
+          'Chuyển câu hỏi phỏng vấn theo JD sang Assessment.',
+          ['Luyện trả lời từng câu bằng ví dụ project thật.'],
+          0.84,
+          interviewRaw
+        ),
+      ],
+      nextActions: [
+        {
+          label: 'Tạo roadmap chi tiết',
+          targetAgent: 'roadmaps',
+          route: '/roadmaps',
+          prompt: `Roadmap Agent: tạo roadmap theo tuần chỉ dựa trên các gap ${gaps.map((gap) => gap.skill).join(', ')} cho JD ${jobTitle}.`,
+        },
+        {
+          label: 'Phỏng vấn thử',
+          targetAgent: 'interviews',
+          route: '/interviews',
+          prompt: `Interview Agent: tạo phiên phỏng vấn thử cho ${jobTitle} dựa trên JD và các gap ${gaps.slice(0, 3).map((gap) => gap.skill).join(', ')}.`,
+        },
+      ],
+      finalRecommendation: topGaps.length
+        ? `Bạn đang thiếu ${topGaps.map((gap) => gap.skill).join(', ')} cho vị trí ${jobTitle}. Hãy học theo lộ trình tuần bên dưới và tạo output cụ thể trước khi ứng tuyển.`
+        : `JD ${jobTitle} hiện khớp khá tốt với hồ sơ đã lưu. Bước tiếp theo là chuẩn bị bằng chứng project và luyện phỏng vấn theo yêu cầu trong JD.`,
+      summaryCard: {
+        goal: role || message,
+        jobTitle,
+        jdSource,
+        topGaps: topGaps.map((gap) => ({
+          skill: gap.skill,
+          priority: gap.priority,
+          reason: gap.reason,
+        })),
+        weeklyRoadmap: roadmap,
+        interviewQuestions,
+        nextAction,
+      },
+      generatedAt: new Date().toISOString(),
+    };
+
+    return {
+      response: this.buildAssessmentResponse(orchestration, message),
+      orchestration,
+    };
+  }
+  private buildAssessmentResponse(orchestration: OrchestrationPlan, message: string): string {
+    const card = orchestration.summaryCard;
+    if (card) {
+      const gaps = card.topGaps.length
+        ? card.topGaps.map((gap) => `- ${gap.skill} (${gap.priority}): ${gap.reason}`).join('\n')
+        : '- Chưa phát hiện kỹ năng thiếu rõ ràng từ JD.';
+      const roadmap = card.weeklyRoadmap.length
+        ? card.weeklyRoadmap.map((item) => `- ${item.week}: ${item.skill} -> ${item.resource}. Output: ${item.output}`).join('\n')
+        : '- Chưa tạo roadmap vì không có gap ưu tiên.';
+      const questions = card.interviewQuestions.map((question, index) => `${index + 1}. ${question}`).join('\n');
+
+      return [
+        `Dựa trên JD ${card.jobTitle} từ ${card.jdSource}:`,
+        '',
+        'Kỹ năng còn thiếu ưu tiên:',
+        gaps,
+        '',
+        'Lộ trình học theo tuần:',
+        roadmap,
+        '',
+        'Câu hỏi phỏng vấn phù hợp JD:',
+        questions,
+        '',
+        `Hành động tiếp theo: ${card.nextAction}`,
+      ].join('\n');
+    }
+
+    const topTraces = orchestration.agentTraces.slice(0, 4);
+    return [
+      `Assessment đã điều phối ${orchestration.agentTraces.length} agent${orchestration.selectedJob ? ` cho ${orchestration.selectedJob}` : ''}.`,
+      ...topTraces.map((trace) => `- ${trace.agentName}: ${trace.summary}`),
+      `Kết luận: ${orchestration.finalRecommendation}`,
+    ].join('\n');
+  }
+
+  private async rememberInteraction(
+    userId: string,
+    agentId: string,
+    userMessage: string,
+    assistantMessage: string,
+    context?: ChatContext
+  ) {
+    try {
+      await this.memoryService.remember(userId, agentId, userMessage, assistantMessage, {
+        routePath: context?.routePath,
+        moduleTitle: context?.moduleTitle,
+        moduleScope: context?.moduleScope,
+        moduleContext: context?.moduleContext,
+      });
+    } catch (error) {
+      logger.warn('Agent memory update skipped', { agentId, error });
+    }
   }
 
   async analyzeJobDescription(jobDescription: string, userProfile?: any): Promise<JDAnalysis> {
@@ -537,7 +1193,8 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
 
   private async callAzure(messages: ChatMessage[], jsonMode = false): Promise<string | null> {
     try {
-      const response = await fetch(
+      const response = await this.fetchProvider(
+        'azure-openai',
         `${this.endpoint}/openai/deployments/${this.deployment}/chat/completions?api-version=${this.apiVersion}`,
         {
           method: 'POST',
@@ -567,6 +1224,7 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       };
       return payload.choices?.[0]?.message?.content || null;
     } catch (error) {
+      if (error instanceof AIRateLimitError && !this.canUseFallback()) throw error;
       logger.warn('Azure OpenAI fallback activated', { error });
       return null;
     }
@@ -574,7 +1232,7 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
 
   private async callOpenAI(messages: ChatMessage[], jsonMode = false): Promise<string | null> {
     try {
-      const response = await fetch(`${this.openAIBaseUrl}/chat/completions`, {
+      const response = await this.fetchProvider('openai', `${this.openAIBaseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.openAIApiKey}`,
@@ -602,6 +1260,7 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       };
       return payload.choices?.[0]?.message?.content || null;
     } catch (error) {
+      if (error instanceof AIRateLimitError && !this.canUseFallback()) throw error;
       logger.warn('OpenAI fallback activated', { error });
       return null;
     }
@@ -609,7 +1268,7 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
 
   private async callGroq(messages: ChatMessage[], jsonMode = false): Promise<string | null> {
     try {
-      const response = await fetch(`${this.groqBaseUrl}/chat/completions`, {
+      const response = await this.fetchProvider('groq', `${this.groqBaseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.groqApiKey}`,
@@ -625,10 +1284,10 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       });
 
       if (!response.ok) {
-        logger.warn('Groq request failed', {
-          status: response.status,
-          statusText: response.statusText,
-        });
+        const body = await response.text().catch(() => '');
+        logger.warn(
+          `Groq request failed: ${response.status} ${response.statusText}${body ? ` - ${body.slice(0, 240)}` : ''}`
+        );
         return null;
       }
 
@@ -637,14 +1296,17 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       };
       return payload.choices?.[0]?.message?.content || null;
     } catch (error) {
-      logger.warn('Groq fallback activated', { error });
+      if (error instanceof AIRateLimitError && !this.canUseFallback()) throw error;
+      const message = error instanceof Error ? error.message : String(error);
+      const cause = error instanceof Error && error.cause instanceof Error ? `; cause=${error.cause.message}` : '';
+      logger.warn(`Groq fallback activated: ${message}${cause}`);
       return null;
     }
   }
 
   private async callOllama(messages: ChatMessage[], jsonMode = false): Promise<string | null> {
     try {
-      const response = await fetch(`${this.ollamaBaseUrl}/api/chat`, {
+      const response = await this.fetchProvider('ollama', `${this.ollamaBaseUrl}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -674,55 +1336,44 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       };
       return payload.message?.content || payload.response || null;
     } catch (error) {
+      if (error instanceof AIRateLimitError && !this.canUseFallback()) throw error;
       logger.warn('Ollama fallback activated', { error });
       return null;
     }
   }
 
   private fallbackChat(message: string, agentId = 'general'): string {
-    const lower = message.toLowerCase();
     const normalized = normalizeVietnamese(message);
-    const vietnamese = isVietnameseMessage(message);
     const prefix = agentId === 'assessment'
-      ? 'Assessment Orchestrator: '
-      : `${(AGENT_PROMPTS[agentId] ? agentId : 'general').replace(/^\w/, (c) => c.toUpperCase())} Agent: `;
+      ? 'Assessment Agent: '
+      : `${AGENT_DISPLAY_NAMES[agentId] || 'Avora Agent'}: `;
 
     if (agentId === 'jobs') {
-      return `${prefix}Pick a specific job or paste its requirements. I will compare it with your current skills, list missing requirements, then suggest a roadmap and interview practice.`;
+      return `${prefix}Hãy chọn một job cụ thể hoặc paste JD. Tôi sẽ trích xuất yêu cầu thật, so sánh với hồ sơ và liệt kê kỹ năng còn thiếu.`;
     }
     if (agentId === 'roadmaps') {
-      return `${prefix}Tell me the target role and your current skills. I will turn the biggest gaps into a weekly learning plan with one portfolio project.`;
+      return `${prefix}Tôi chỉ tạo lộ trình sau khi có danh sách gap kỹ năng từ Jobs Agent. Hãy gửi JD hoặc kết quả phân tích gap trước.`;
     }
     if (agentId === 'interviews') {
-      return `${prefix}Tell me the role or selected job. I will create focused questions, expected points, and feedback using STAR and technical evidence.`;
+      return `${prefix}Hãy gửi vị trí hoặc JD cụ thể. Tôi sẽ tạo câu hỏi phỏng vấn bám sát yêu cầu thực tế của job đó.`;
     }
     if (agentId === 'profile') {
-      return `${prefix}Share your skills, access needs, preferred work style, and boundaries. I will help make your profile specific enough for job matching.`;
+      return `${prefix}Hãy chia sẻ kỹ năng hiện có, kinh nghiệm, nhu cầu hỗ trợ và kiểu môi trường làm việc bạn muốn. Tôi sẽ giúp hồ sơ đủ cụ thể để so khớp JD.`;
     }
     if (agentId === 'assessment') {
-      return `${prefix}I will combine profile, job fit, roadmap, interview, confidence, and simulation signals. Start with your goal, current skills, and what support you need.`;
+      return `${prefix}Bạn muốn ứng tuyển vị trí cụ thể nào? Hãy paste JD vào đây, hoặc tôi sẽ tìm JD phù hợp cho bạn. Tôi sẽ không tạo lộ trình khi chưa có JD thật và dữ liệu hồ sơ để so sánh.`;
     }
 
-    if (vietnamese) {
-      if (normalized.includes('phong van') || normalized.includes('interview')) {
-        return 'Bạn nên chuẩn bị câu trả lời theo STAR: tình huống, nhiệm vụ, hành động và kết quả. Nếu cần hỗ trợ tiếp cận khi phỏng vấn, mình có thể giúp bạn viết một câu yêu cầu ngắn gọn và tự tin.';
-      }
-      if (normalized.includes('viec') || normalized.includes('job') || normalized.includes('nghe')) {
-        return 'Mình sẽ ưu tiên các công việc có mô tả rõ, lịch linh hoạt, có thể làm từ xa và có hỗ trợ tiếp cận. Hãy nói cho mình biết kỹ năng mạnh nhất của bạn và điều kiện làm việc bạn cần.';
-      }
-      if (normalized.includes('hoc') || normalized.includes('lo trinh') || normalized.includes('roadmap')) {
-        return 'Mình có thể chia mục tiêu của bạn thành lộ trình từng bước: học nền tảng trước, làm bài tập nhỏ để có sản phẩm, rồi luyện phỏng vấn và hồ sơ. Bạn muốn học ngành nào, ví dụ frontend, data, thiết kế, hay hỗ trợ khách hàng?';
-      }
-      return 'Mình hiểu. Hãy nói rõ hơn về điều bạn làm tốt, điều khiến bạn mệt hoặc cần hỗ trợ, và môi trường làm việc bạn mong muốn. Mình sẽ gợi ý bước tiếp theo thật cụ thể.';
+    if (normalized.includes('phong van') || normalized.includes('interview')) {
+      return 'Bạn nên chuẩn bị câu trả lời theo STAR: tình huống, nhiệm vụ, hành động và kết quả. Nếu có JD cụ thể, tôi sẽ tạo câu hỏi sát yêu cầu job hơn.';
     }
-
-    if (lower.includes('interview') || lower.includes('phong van')) {
-      return 'Start with a specific STAR example: situation, task, action, and result. If you need accessibility adjustments, I can help you write a short, confident request.';
+    if (normalized.includes('viec') || normalized.includes('job') || normalized.includes('nghe')) {
+      return 'Hãy gửi một JD hoặc tên vị trí cụ thể. Tôi sẽ phân tích yêu cầu, so sánh với hồ sơ và chỉ ra gap kỹ năng thật.';
     }
-    if (lower.includes('job') || lower.includes('viec')) {
-      return 'I will prioritize roles with clear expectations, flexible schedules, remote options, and accessibility support. Tell me your strongest skill and the work conditions you need.';
+    if (normalized.includes('hoc') || normalized.includes('lo trinh') || normalized.includes('roadmap')) {
+      return 'Để tạo lộ trình đúng trọng tâm, tôi cần danh sách kỹ năng còn thiếu từ một JD cụ thể. Hãy paste JD hoặc yêu cầu Jobs Agent phân tích trước.';
     }
-    return 'I understand. Tell me more about what you do well, what drains your energy or requires support, and what kind of work environment you want.';
+    return 'Mình hiểu. Hãy nói rõ mục tiêu, vị trí bạn muốn ứng tuyển hoặc JD cụ thể để mình chuyển đúng agent và đưa bước tiếp theo có cơ sở.';
   }
 
   private fallbackFitAnalysis(

@@ -1,15 +1,23 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { UserProfile } from '../types/shared.js';
-import { demoProfiles, demoSavedJobs, demoUsers, type DemoUser } from './demo-store.js';
+import {
+  demoAgentMemories,
+  demoProfiles,
+  demoSavedJobs,
+  demoUsers,
+  type DemoAgentMemory,
+  type DemoUser,
+} from './demo-store.js';
 import { logger } from '../utils/logger.js';
 
 type PersistedDemoData = {
-  version: 1;
+  version: 2;
   updatedAt: string;
   users: DemoUser[];
   profiles: UserProfile[];
   savedJobs: { userId: string; jobIds: string[] }[];
+  agentMemories: DemoAgentMemory[];
 };
 
 const demoDataFile =
@@ -18,11 +26,12 @@ const demoDataFile =
 let saveQueue = Promise.resolve();
 
 const emptyDemoData = (): PersistedDemoData => ({
-  version: 1,
+  version: 2,
   updatedAt: new Date().toISOString(),
   users: [],
   profiles: [],
   savedJobs: [],
+  agentMemories: [],
 });
 
 export async function loadDemoData(): Promise<void> {
@@ -51,10 +60,18 @@ export async function loadDemoData(): Promise<void> {
       }
     }
 
+    demoAgentMemories.clear();
+    for (const memory of data.agentMemories || []) {
+      if (memory.userId && memory.agentId) {
+        demoAgentMemories.set(`${memory.userId}:${memory.agentId}`, memory);
+      }
+    }
+
     logger.info('Loaded demo data store', {
       users: demoUsers.size,
       profiles: demoProfiles.size,
       savedJobs: demoSavedJobs.size,
+      agentMemories: demoAgentMemories.size,
       file: demoDataFile,
     });
   } catch (error: any) {
@@ -74,6 +91,7 @@ export async function saveDemoData(): Promise<void> {
         userId,
         jobIds: [...jobIds],
       })),
+      agentMemories: [...demoAgentMemories.values()],
     };
 
     await mkdir(path.dirname(demoDataFile), { recursive: true });

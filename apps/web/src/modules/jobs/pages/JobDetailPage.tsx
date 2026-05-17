@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../../utils/helpers';
 import { handleApiError, interviewService, jobService, roadmapService } from '../../../services';
-import type { JDAnalysis, Job } from '../../../lib/shared';
+import type { InterviewSession, JDAnalysis, Job, Roadmap } from '../../../lib/shared';
 import { useAuthStore } from '../../../store';
 
 const salaryLabel = (job: Job) => {
@@ -38,6 +38,12 @@ export default function JobDetailPage() {
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
   const [isCreatingRoadmap, setIsCreatingRoadmap] = React.useState(false);
   const [isStartingInterview, setIsStartingInterview] = React.useState(false);
+  const [isCreatingActionPlan, setIsCreatingActionPlan] = React.useState(false);
+  const [generatedPlan, setGeneratedPlan] = React.useState<{
+    roadmap: Roadmap;
+    interview: InterviewSession;
+    nextActions: string[];
+  } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [isSaved, setIsSaved] = React.useState(false);
 
@@ -73,23 +79,25 @@ export default function JobDetailPage() {
     };
   }, [id]);
 
+  const userProfileContext = React.useMemo(() => ({
+    ...user,
+    selectedJob: job
+      ? {
+          id: job.id,
+          title: job.basic.title,
+          company: job.basic.company,
+          skills: job.details.requirements.skills,
+        }
+      : undefined,
+  }), [job, user]);
+
   const handleAnalyze = async () => {
     if (!id) return;
     setIsAnalyzing(true);
     setError(null);
 
     try {
-      const response = await jobService.analyzeJob(id, {
-        ...user,
-        selectedJob: job
-          ? {
-              id: job.id,
-              title: job.basic.title,
-              company: job.basic.company,
-              skills: job.details.requirements.skills,
-            }
-          : undefined,
-      });
+      const response = await jobService.analyzeJob(id, userProfileContext);
       setAnalysis(response.analysis);
       setActiveTab('fit');
     } catch (err) {
@@ -97,6 +105,28 @@ export default function JobDetailPage() {
       setError(apiError.message || apiError.error);
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleCreateActionPlan = async () => {
+    if (!id || !job) return;
+    setIsCreatingActionPlan(true);
+    setError(null);
+
+    try {
+      const response = await jobService.createJobActionPlan(id, userProfileContext);
+      setAnalysis(response.analysis);
+      setGeneratedPlan({
+        roadmap: response.roadmap,
+        interview: response.interview,
+        nextActions: response.nextActions,
+      });
+      setActiveTab('fit');
+    } catch (err) {
+      const apiError = handleApiError(err);
+      setError(apiError.message || apiError.error);
+    } finally {
+      setIsCreatingActionPlan(false);
     }
   };
 
@@ -380,9 +410,14 @@ export default function JobDetailPage() {
                 <p className="text-primary-800 text-sm mb-4">
                   Compare this selected job with your profile, find missing skills, then create a focused roadmap or mock interview.
                 </p>
-                <Button size="sm" variant="outline" className="border-primary-300 text-primary-700" onClick={handleAnalyze} isLoading={isAnalyzing}>
-                  {analysis ? 'Refresh Fit Analysis' : 'Analyze This Job'}
-                </Button>
+                <div className="space-y-2">
+                  <Button size="sm" onClick={handleCreateActionPlan} isLoading={isCreatingActionPlan}>
+                    Build Full Job Plan
+                  </Button>
+                  <Button size="sm" variant="outline" className="border-primary-300 text-primary-700" onClick={handleAnalyze} isLoading={isAnalyzing}>
+                    {analysis ? 'Refresh Fit Analysis' : 'Analyze Only'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -402,9 +437,14 @@ export default function JobDetailPage() {
                   <p className="mt-2 text-gray-600">
                     Avora will compare this selected role with your current skills, identify gaps, then prepare focused next steps.
                   </p>
-                  <Button className="mt-5" onClick={handleAnalyze} isLoading={isAnalyzing}>
-                    Analyze Fit & Gaps
-                  </Button>
+                  <div className="mt-5 flex flex-wrap justify-center gap-3">
+                    <Button onClick={handleCreateActionPlan} isLoading={isCreatingActionPlan}>
+                      Build Full Job Plan
+                    </Button>
+                    <Button variant="outline" onClick={handleAnalyze} isLoading={isAnalyzing}>
+                      Analyze Only
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -588,7 +628,20 @@ export default function JobDetailPage() {
                       <p className="mt-2 text-sm text-gray-600">
                         These actions use the selected job, not a generic role, so the plan and questions target the exact gaps above.
                       </p>
+                      {generatedPlan && (
+                        <div className="mt-4 rounded-xl bg-success-50 p-3 text-sm text-success-800">
+                          <p className="font-semibold">Full plan created.</p>
+                          <ul className="mt-2 list-disc space-y-1 pl-4">
+                            {generatedPlan.nextActions.map((action) => (
+                              <li key={action}>{action}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                       <div className="mt-4 space-y-3">
+                        <Button className="w-full justify-center" onClick={handleCreateActionPlan} isLoading={isCreatingActionPlan}>
+                          Build Full Job Plan
+                        </Button>
                         <Button className="w-full justify-center" onClick={handleCreateRoadmap} isLoading={isCreatingRoadmap}>
                           Create Gap Roadmap
                         </Button>
@@ -600,6 +653,16 @@ export default function JobDetailPage() {
                         >
                           Start Mock Interview
                         </Button>
+                        {generatedPlan && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/roadmaps/${generatedPlan.roadmap.id}`)}>
+                              Open Roadmap
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/interviews/${generatedPlan.interview.id}`)}>
+                              Open Interview
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

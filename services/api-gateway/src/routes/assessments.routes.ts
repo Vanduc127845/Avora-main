@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { AppError } from '../middleware/error.middleware.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
+import { aiActionLimiter } from '../middleware/rate-limit.middleware.js';
 import { AssessmentService } from '../services/assessment.service.js';
 
 const router: Router = Router();
@@ -73,8 +74,8 @@ const addAssessmentMessage = async (req: Request, res: Response, next: NextFunct
   }
 };
 
-router.post('/:id/message', addAssessmentMessage);
-router.post('/:id/chat', addAssessmentMessage);
+router.post('/:id/message', aiActionLimiter, addAssessmentMessage);
+router.post('/:id/chat', aiActionLimiter, addAssessmentMessage);
 
 const completeAssessment = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -88,7 +89,7 @@ const completeAssessment = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-router.put('/:id/complete', completeAssessment);
-router.put('/:id/done', completeAssessment);
+router.put('/:id/complete', aiActionLimiter, completeAssessment);
+router.put('/:id/done', aiActionLimiter, completeAssessment);
 
 export const assessmentsRouter = router;

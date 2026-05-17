@@ -1,3 +1,43 @@
+export interface AgentTrace {
+  agentId: string;
+  agentName: string;
+  status: 'complete' | 'needs-input' | 'queued' | 'error';
+  runtimeStatus?: 'idle' | 'thinking' | 'done' | 'error';
+  summary: string;
+  evidence: string[];
+  handoff: string;
+  rawOutput?: string;
+  confidence: number;
+  actions: string[];
+}
+
+export interface OrchestrationAction {
+  label: string;
+  targetAgent: string;
+  route: string;
+  prompt: string;
+}
+
+export interface OrchestrationPlan {
+  intent: string;
+  selectedJob?: string;
+  jdSource?: string;
+  missingInputs: string[];
+  agentTraces: AgentTrace[];
+  nextActions: OrchestrationAction[];
+  finalRecommendation: string;
+  summaryCard?: {
+    goal: string;
+    jobTitle: string;
+    jdSource: string;
+    topGaps: { skill: string; priority: 'High' | 'Medium' | 'Low'; reason: string }[];
+    weeklyRoadmap: { week: string; skill: string; resource: string; output: string }[];
+    interviewQuestions: string[];
+    nextAction: string;
+  };
+  generatedAt: string;
+}
+
 export interface Conversation {
   id: string;
   role: 'user' | 'assistant';
@@ -8,6 +48,7 @@ export interface Conversation {
     skills?: string[];
     values?: string[];
     barriers?: string[];
+    orchestration?: OrchestrationPlan;
   };
 }
 

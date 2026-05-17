@@ -28,6 +28,7 @@ export default function LoginPage() {
   const [resetToken, setResetToken] = React.useState<string | null>(null);
   const [newPassword, setNewPassword] = React.useState('');
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
+  const isOAuthEnabled = import.meta.env.VITE_ENABLE_OAUTH !== 'false';
 
   const {
     register,
@@ -165,7 +166,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          {mode === 'login' && (
+          {mode === 'login' && isOAuthEnabled && (
             <>
               <div className="space-y-3 mb-6">
                 <button

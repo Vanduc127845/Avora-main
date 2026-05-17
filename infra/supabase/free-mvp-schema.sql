@@ -218,6 +218,29 @@ on public.interview_sessions for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
+create table if not exists public.agent_memories (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  agent_id text not null,
+  summary text not null default '',
+  facts jsonb not null default '[]',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, agent_id)
+);
+
+drop trigger if exists agent_memories_set_updated_at on public.agent_memories;
+create trigger agent_memories_set_updated_at
+before update on public.agent_memories
+for each row execute function public.set_updated_at();
+
+alter table public.agent_memories enable row level security;
+
+drop policy if exists "agent_memories_own" on public.agent_memories;
+create policy "agent_memories_own"
+on public.agent_memories for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
 insert into public.jobs (
   title,
   company,

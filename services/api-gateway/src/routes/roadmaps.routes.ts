@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 import { AppError } from '../middleware/error.middleware.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
+import { aiActionLimiter } from '../middleware/rate-limit.middleware.js';
 import { RoadmapService } from '../services/roadmap.service.js';
 
 const router: Router = Router();
@@ -28,6 +29,7 @@ router.get('/',
 );
 
 router.post('/',
+  aiActionLimiter,
   body('targetJobId').notEmpty(),
   body('title').notEmpty().trim(),
   body('settings').optional().isObject(),

@@ -124,6 +124,13 @@ export const demoJobs: Job[] = [
 ];
 
 export type DemoUser = { id: string; email: string; passwordHash: string; name: string };
+export type DemoAgentMemory = {
+  userId: string;
+  agentId: string;
+  summary: string;
+  facts: string[];
+  updatedAt: string;
+};
 
 export const demoUsers = new Map<string, DemoUser>();
 export const demoPasswordResetTokens = new Map<string, { userId: string; expiresAt: Date }>();
@@ -132,3 +139,4 @@ export const demoSavedJobs = new Map<string, Set<string>>();
 export const demoAssessments = new Map<string, Assessment>();
 export const demoRoadmaps = new Map<string, Roadmap>();
 export const demoInterviews = new Map<string, InterviewSession>();
+export const demoAgentMemories = new Map<string, DemoAgentMemory>();

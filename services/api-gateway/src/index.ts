@@ -4,7 +4,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
 
 import { logger } from './utils/logger.js';
 import { getDemoDataFile, loadDemoData } from './data/demo-persistence.js';
@@ -17,10 +16,16 @@ import { roadmapsRouter } from './routes/roadmaps.routes.js';
 import { interviewsRouter } from './routes/interviews.routes.js';
 import { aiRouter } from './routes/ai.routes.js';
 import { partnersRouter } from './routes/partners.routes.js';
+import { dashboardRouter } from './routes/dashboard.routes.js';
+import { agentMemoryRouter } from './routes/agent-memory.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
+import { apiLimiter, getRateLimitStoreStatus } from './middleware/rate-limit.middleware.js';
+import { getOptionalSupabaseAdmin, hasSupabaseConfig } from './utils/supabase.js';
+import { AIService } from './services/ai.service.js';
 
 const app: Express = express();
 const PORT = process.env.PORT || 4000;
+const readinessAiService = new AIService();
 
 const allowedOrigins = new Set(
   (process.env.CORS_ORIGIN || 'http://localhost:3000,http://127.0.0.1:3000')
@@ -46,12 +51,24 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: 'Too many requests, please try again later.' },
-});
-app.use('/api/', limiter);
+if (process.env.DEBUG_API_REQUESTS === 'true') {
+  app.use('/api', (req, res, next) => {
+    const startedAt = Date.now();
+    const requestId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    res.on('finish', () => {
+      logger.info('api-request', {
+        requestId,
+        endpoint: `${req.method} ${req.originalUrl}`,
+        timestamp: new Date(startedAt).toISOString(),
+        status: res.statusCode,
+        durationMs: Date.now() - startedAt,
+      });
+    });
+    next();
+  });
+}
+
+app.use('/api/', apiLimiter);
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('combined', {
@@ -63,12 +80,64 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get('/ready', async (_req, res) => {
+  const ai = readinessAiService.getStatus();
+  const supabase = getOptionalSupabaseAdmin();
+  const isProduction = process.env.NODE_ENV === 'production';
+  let database = {
+    ok: !isProduction || hasSupabaseConfig(),
+    configured: hasSupabaseConfig(),
+    mode: hasSupabaseConfig() ? 'supabase' : 'demo',
+    message: hasSupabaseConfig()
+      ? 'Supabase configured'
+      : 'Using demo/local persistence. Configure Supabase before public production.',
+  };
+
+  if (supabase) {
+    const { error } = await supabase
+      .from('profiles')
+      .select('id', { head: true, count: 'exact' })
+      .limit(1);
+
+    database = {
+      ok: !error,
+      configured: true,
+      mode: 'supabase',
+      message: error ? error.message : 'Supabase reachable',
+    };
+  }
+
+  const checks = {
+    api: { ok: true },
+    database,
+    ai: {
+      ok: ai.configured || ai.fallbackEnabled,
+      provider: ai.provider,
+      configured: ai.configured,
+      fallbackEnabled: ai.fallbackEnabled,
+      model: ai.model,
+      missingEnv: ai.missingEnv,
+    },
+    rateLimit: getRateLimitStoreStatus(),
+  };
+
+  const ok = checks.api.ok && checks.database.ok && checks.ai.ok;
+  res.status(ok ? 200 : 503).json({
+    status: ok ? 'ok' : 'degraded',
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.round(process.uptime()),
+    checks,
+  });
+});
+
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/assessments', assessmentsRouter);
 app.use('/api/jobs', jobsRouter);
 app.use('/api/roadmaps', roadmapsRouter);
 app.use('/api/interviews', interviewsRouter);
+app.use('/api/dashboard', dashboardRouter);
+app.use('/api/agent-memory', agentMemoryRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api', partnersRouter);
 

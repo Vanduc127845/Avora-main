@@ -26,7 +26,7 @@ import {
   UserRoundCheck,
 } from 'lucide-react';
 import { useAuthStore } from '../../../store';
-import { assessmentService, handleApiError, interviewService, jobService, roadmapService } from '../../../services';
+import { dashboardService, handleApiError } from '../../../services';
 import type { Assessment, InterviewSession, Job, Roadmap } from '../../../lib/shared';
 
 const collaborators = [
@@ -200,31 +200,22 @@ export default function DashboardPage() {
       setIsLoading(true);
       setError(null);
 
-      const [savedJobsResult, roadmapsResult, interviewsResult, assessmentsResult] = await Promise.allSettled([
-        jobService.getSavedJobs(),
-        roadmapService.getRoadmaps(),
-        interviewService.getInterviews(),
-        assessmentService.getHistory(),
-      ]);
-
-      if (!mounted) return;
-
-      setSnapshot({
-        savedJobs: savedJobsResult.status === 'fulfilled' ? savedJobsResult.value.jobs : [],
-        roadmaps: roadmapsResult.status === 'fulfilled' ? roadmapsResult.value.roadmaps : [],
-        interviews: interviewsResult.status === 'fulfilled' ? interviewsResult.value.interviews : [],
-        assessments: assessmentsResult.status === 'fulfilled' ? assessmentsResult.value.assessments : [],
-      });
-
-      const failed = [savedJobsResult, roadmapsResult, interviewsResult, assessmentsResult].find(
-        (result) => result.status === 'rejected'
-      );
-      if (failed?.status === 'rejected') {
-        const apiError = handleApiError(failed.reason);
+      try {
+        const summary = await dashboardService.getSummary();
+        if (!mounted) return;
+        setSnapshot({
+          savedJobs: summary.savedJobs,
+          roadmaps: summary.roadmaps,
+          interviews: summary.interviews,
+          assessments: summary.assessments,
+        });
+      } catch (err) {
+        if (!mounted) return;
+        const apiError = handleApiError(err);
         setError(apiError.message || apiError.error);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
-
-      setIsLoading(false);
     };
 
     loadSnapshot();

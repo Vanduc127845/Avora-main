@@ -32,6 +32,7 @@ services/api-gateway/data/*.json
 
 # Test coverage
 coverage/
+tests/test-results/
 
 # Mobile builds
 *.ipa

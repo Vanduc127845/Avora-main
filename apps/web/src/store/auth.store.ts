@@ -119,7 +119,13 @@ export const useAuthStore = create<AuthState>()(
               };
               set({ user: userProfile, isAuthenticated: true });
             } else {
-              set({ user: null, isAuthenticated: false });
+              const state = get();
+              if (state.token && state.user) {
+                set({ isAuthenticated: true });
+                return;
+              }
+
+              set({ user: null, token: null, isAuthenticated: false });
             }
           });
         } catch (error) {
