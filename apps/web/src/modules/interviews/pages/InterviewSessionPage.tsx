@@ -5,6 +5,7 @@ import { ArrowLeft, Mic, Square, Pause, ChevronRight, CheckCircle2, Lightbulb, A
 import { motion, AnimatePresence } from 'framer-motion';
 import { handleApiError, interviewService } from '../../../services';
 import type { InterviewResponse, InterviewSession } from '../../../lib/shared';
+import { useSpeechToText } from '../../../hooks/useSpeechToText';
 
 export default function InterviewSessionPage() {
   const { id } = useParams();
@@ -16,6 +17,13 @@ export default function InterviewSessionPage() {
   const [timeRemaining, setTimeRemaining] = React.useState(120);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const getResponseBaseText = React.useCallback(() => response, [response]);
+  const handleSpeechEnd = React.useCallback(() => setIsRecording(false), []);
+  const speechAnswer = useSpeechToText({
+    getBaseText: getResponseBaseText,
+    onEnd: handleSpeechEnd,
+    onTranscript: setResponse,
+  });
 
   React.useEffect(() => {
     let mounted = true;
@@ -62,6 +70,24 @@ export default function InterviewSessionPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const startRecording = React.useCallback(() => {
+    if (!interview) return;
+
+    setError(null);
+    speechAnswer.clearError();
+    setIsRecording(true);
+    setTimeRemaining(interview.config.timePerQuestion);
+
+    if (speechAnswer.isSupported && !speechAnswer.start()) {
+      setIsRecording(false);
+    }
+  }, [interview, speechAnswer]);
+
+  const stopRecording = React.useCallback(() => {
+    setIsRecording(false);
+    if (speechAnswer.isListening) speechAnswer.stop();
+  }, [speechAnswer]);
+
   const pauseOrResume = async () => {
     if (!interview) return;
     setError(null);
@@ -79,6 +105,7 @@ export default function InterviewSessionPage() {
   const submitResponse = async () => {
     if (!interview || !currentQuestion || response.trim().length < 5) return;
 
+    stopRecording();
     setIsSubmitting(true);
     setError(null);
     try {
@@ -96,7 +123,7 @@ export default function InterviewSessionPage() {
       setError(apiError.message || apiError.error);
     } finally {
       setIsSubmitting(false);
-      setIsRecording(false);
+      stopRecording();
     }
   };
 
@@ -288,9 +315,9 @@ export default function InterviewSessionPage() {
                   <textarea
                     value={response}
                     onChange={(event) => setResponse(event.target.value)}
-                    placeholder="Type your response here. You can use the timer as practice even without audio recording."
+                    placeholder="Type or dictate your response here."
                     className="input min-h-[150px] resize-none"
-                    disabled={isRecording || interview.status === 'paused'}
+                    disabled={isSubmitting || interview.status === 'paused'}
                   />
                 </div>
 
@@ -299,11 +326,14 @@ export default function InterviewSessionPage() {
                     <Button
                       size="lg"
                       className="rounded-full w-16 h-16"
-                      onClick={() => {
-                        setIsRecording(true);
-                        setTimeRemaining(interview.config.timePerQuestion);
-                      }}
-                      disabled={interview.status === 'paused'}
+                      onClick={startRecording}
+                      disabled={interview.status === 'paused' || isSubmitting}
+                      aria-label="Start speech-to-text"
+                      title={
+                        speechAnswer.isSupported
+                          ? 'Speak to transcribe your answer'
+                          : 'Speech-to-text is not supported; timer will still run'
+                      }
                     >
                       <Mic className="h-6 w-6" />
                     </Button>
@@ -312,14 +342,25 @@ export default function InterviewSessionPage() {
                       size="lg"
                       variant="danger"
                       className="rounded-full w-16 h-16 bg-red-500 hover:bg-red-600"
-                      onClick={() => setIsRecording(false)}
+                      onClick={stopRecording}
+                      aria-label="Stop speech-to-text"
                     >
                       <Square className="h-6 w-6" />
                     </Button>
                   )}
                 </div>
-                <p className="text-center text-sm text-gray-500">
-                  {isRecording ? 'Timer running. Click to stop.' : 'Use the microphone button to practice timing.'}
+                <p
+                  className={`text-center text-sm ${speechAnswer.error ? 'text-red-600' : 'text-gray-500'}`}
+                  role={speechAnswer.error ? 'alert' : 'status'}
+                >
+                  {speechAnswer.error ||
+                    (isRecording
+                      ? speechAnswer.isSupported
+                        ? 'Listening and transcribing...'
+                        : 'Timer running. Speech-to-text is unavailable in this browser.'
+                      : speechAnswer.isSupported
+                        ? 'Use the microphone button to dictate your response.'
+                        : 'Speech-to-text requires a supported browser.')}
                 </p>
 
                 <Button

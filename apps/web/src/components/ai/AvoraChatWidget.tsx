@@ -1,9 +1,10 @@
 import React from 'react';
-import { Loader2, MessageCircle, Send, Sparkles, X } from 'lucide-react';
+import { Loader2, MessageCircle, Mic, MicOff, Send, Sparkles, X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { handleApiError, post } from '../../services';
 import { useAuthStore } from '../../store';
 import { getAgentForPath, type AgentId } from '../../lib/agentRegistry';
+import { useSpeechToText } from '../../hooks/useSpeechToText';
 
 type ChatMessage = {
   id: string;
@@ -21,6 +22,11 @@ export default function AvoraChatWidget() {
   const [isSending, setIsSending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const speechInput = useSpeechToText({
+    getBaseText: () => input,
+    onTranscript: setInput,
+  });
+  const stopSpeechInput = speechInput.stop;
 
   const getOpeningMessage = React.useCallback(
     (agentId: AgentId, content = agent.opening): ChatMessage => ({
@@ -43,6 +49,10 @@ export default function AvoraChatWidget() {
     return () => window.removeEventListener('avora:open-agent-chat', openChat);
   }, []);
 
+  React.useEffect(() => {
+    if (!isOpen) stopSpeechInput();
+  }, [isOpen, stopSpeechInput]);
+
   if (!isAuthenticated || agent.id === 'assessment') return null;
 
   const updateAgentMessages = (agentId: AgentId, updater: (previous: ChatMessage[]) => ChatMessage[]) => {
@@ -59,6 +69,8 @@ export default function AvoraChatWidget() {
   const sendMessage = async () => {
     const content = input.trim();
     if (!content || isSending) return;
+
+    if (speechInput.isListening) speechInput.stop();
 
     const activeAgent = agent;
     const userMessage: ChatMessage = {
@@ -176,6 +188,27 @@ export default function AvoraChatWidget() {
               />
               <button
                 type="button"
+                onClick={speechInput.toggle}
+                disabled={isSending}
+                className={`flex h-12 w-12 items-center justify-center rounded-xl border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                  speechInput.isListening
+                    ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
+                    : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-primary-700'
+                }`}
+                aria-label={speechInput.isListening ? 'Dung nhap bang giong noi' : 'Nhap bang giong noi'}
+                aria-pressed={speechInput.isListening}
+                title={
+                  speechInput.isSupported
+                    ? speechInput.isListening
+                      ? 'Dung nghe'
+                      : 'Noi de chuyen thanh van ban'
+                    : 'Trinh duyet chua ho tro speech-to-text'
+                }
+              >
+                {speechInput.isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              </button>
+              <button
+                type="button"
                 onClick={sendMessage}
                 disabled={isSending || !input.trim()}
                 className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -184,6 +217,14 @@ export default function AvoraChatWidget() {
                 <Send className="h-5 w-5" />
               </button>
             </div>
+            {(speechInput.isListening || speechInput.error) && (
+              <p
+                className={`mt-2 text-xs ${speechInput.error ? 'text-red-600' : 'text-stone-500'}`}
+                role={speechInput.error ? 'alert' : 'status'}
+              >
+                {speechInput.error || (speechInput.interimTranscript ? 'Dang nghe va nhap van ban...' : 'Dang nghe...')}
+              </p>
+            )}
           </div>
         </div>
       )}

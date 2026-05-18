@@ -48,6 +48,43 @@ export const demoJobs: Job[] = [
     scrapedAt: new Date(),
   },
   {
+    id: 'job_backend_remote',
+    source: 'avora-demo',
+    url: 'https://example.com/jobs/backend',
+    basic: {
+      title: 'Junior Backend Developer',
+      company: 'Avora API Studio',
+      location: 'Remote',
+      remote: 'remote',
+      salary: { min: 60000, max: 82000, currency: 'USD' },
+    },
+    details: {
+      description:
+        'Build Node.js APIs, integrate databases, document endpoints, and collaborate with frontend engineers on accessible product workflows.',
+      responsibilities: [
+        'Build and maintain REST API endpoints',
+        'Write clear validation and error handling for backend services',
+        'Work with frontend engineers to connect user-facing flows',
+      ],
+      requirements: {
+        education: ['Portfolio, bootcamp, or equivalent backend project experience accepted'],
+        experience: '0-2 years',
+        skills: ['Node.js', 'Express', 'REST API', 'SQL', 'Git'],
+      },
+      benefits: ['Remote work', 'Async documentation', 'Mentorship', 'Assistive technology budget'],
+    },
+    accessibility: {
+      rating: 89,
+      features: ['Remote-first', 'Async code review', 'Written technical specs'],
+      accommodations: ['Flexible focus blocks', 'Meeting notes', 'Extra time for technical tasks'],
+      barriers: ['Occasional incident response rotation'],
+      communityRating: 4.4,
+    },
+    analysis: null,
+    postedAt: new Date(),
+    scrapedAt: new Date(),
+  },
+  {
     id: 'job_data_assistant',
     source: 'avora-demo',
     url: 'https://example.com/jobs/data-analyst',

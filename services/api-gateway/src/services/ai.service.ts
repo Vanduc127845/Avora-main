@@ -355,9 +355,40 @@ const scoreCandidateJob = (job: CandidateJob, text: string, role?: string) => {
   return needles.reduce((score, part) => score + (haystack.includes(part) ? 1 : 0), 0);
 };
 
+const GENERIC_ROLE_TOKENS = new Set([
+  'assistant',
+  'developer',
+  'engineer',
+  'intern',
+  'job',
+  'junior',
+  'lead',
+  'middle',
+  'role',
+  'senior',
+  'specialist',
+  'staff',
+]);
+
+const roleSpecificTokens = (role: string) =>
+  skillKey(role)
+    .split(' ')
+    .filter((token) => token.length > 1 && !GENERIC_ROLE_TOKENS.has(token));
+
+const roleMatchesJobTitle = (job: CandidateJob, role: string) => {
+  const tokens = roleSpecificTokens(role);
+  if (!tokens.length) return true;
+
+  const title = skillKey(job.basic.title);
+  return tokens.some((token) => title.includes(token));
+};
+
 const selectCandidateJob = (jobs: CandidateJob[], text: string, role?: string): CandidateJob | null => {
   if (!jobs.length) return null;
-  const scored = jobs
+  const pool = role ? jobs.filter((job) => roleMatchesJobTitle(job, role)) : jobs;
+  if (role && roleSpecificTokens(role).length && pool.length === 0) return null;
+
+  const scored = (pool.length ? pool : jobs)
     .map((job) => ({ job, score: scoreCandidateJob(job, text, role) }))
     .sort((left, right) => right.score - left.score);
   if (scored[0]?.score > 0) return scored[0].job;
@@ -771,9 +802,14 @@ export class AIService {
     context?: ChatContext
   ): { response: string; orchestration: OrchestrationPlan } {
     const conversationText = combineConversationText(message, context);
-    const role = detectRole(conversationText);
-    const pastedJD = extractPastedJD(message, context);
-    const candidateJob = selectCandidateJob(readCandidateJobs(context), conversationText, role);
+    const messageRole = detectRole(message);
+    const role = messageRole || detectRole(conversationText);
+    const pastedJD = extractPastedJD(message, messageRole ? undefined : context);
+    const candidateJob = selectCandidateJob(
+      readCandidateJobs(context),
+      messageRole ? message : conversationText,
+      role
+    );
     const jobTitle = candidateJob?.basic.title || role || 'vị trí mục tiêu';
     const jdText = candidateJob ? formatJobDescription(candidateJob) : pastedJD;
     const jdSource = candidateJob
