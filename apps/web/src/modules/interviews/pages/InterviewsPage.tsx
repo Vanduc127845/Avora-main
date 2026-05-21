@@ -12,6 +12,12 @@ export default function InterviewsPage() {
   const [isCreating, setIsCreating] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    window.dispatchEvent(new CustomEvent('avora:agent-status', {
+      detail: { agentId: 'interviews', status: 'done' },
+    }));
+  }, []);
+
   const loadInterviews = React.useCallback(async () => {
     setIsLoading(true);
     setError(null);

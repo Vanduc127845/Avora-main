@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title id="title">Dr. Nguyen Van Mui</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f97316"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" fill="url(#bg)"/>
+  <circle cx="80" cy="70" r="35" fill="#f7d7c5"/>
+  <path fill="#1f2937" d="M48 65c4-25 25-36 48-27 13 5 22 15 22 30-16-11-36-14-70-3Z"/>
+  <path fill="#e5e7eb" d="M31 160c5-35 24-55 49-55s44 20 49 55H31Z"/>
+  <path fill="#0f172a" d="M61 111h38l-19 22-19-22Z"/>
+  <text x="80" y="148" text-anchor="middle" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="800">MUI</text>
+</svg>

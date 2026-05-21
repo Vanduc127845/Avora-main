@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-labelledby="title">
+  <title id="title">Four steps to your next career</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e0f2fe"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="900" fill="url(#bg)"/>
+  <circle cx="720" cy="180" r="110" fill="#38bdf8" opacity=".18"/>
+  <circle cx="150" cy="760" r="160" fill="#22d3ee" opacity=".14"/>
+  <g fill="none" stroke="#7dd3fc" stroke-width="8" stroke-linecap="round" opacity=".7">
+    <path d="M250 245c150-80 300-80 450 0"/>
+    <path d="M250 655c150 80 300 80 450 0"/>
+    <path d="M245 250c-85 145-85 260 0 400"/>
+    <path d="M655 250c85 145 85 260 0 400"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-weight="800">
+    <g transform="translate(95 90)">
+      <rect width="270" height="190" rx="28" fill="url(#card)"/>
+      <circle cx="64" cy="62" r="34" fill="#0ea5e9"/>
+      <text x="64" y="74" text-anchor="middle" fill="#fff" font-size="34">1</text>
+      <text x="124" y="58" fill="#0f172a" font-size="25">Discover</text>
+      <text x="124" y="95" fill="#475569" font-size="18" font-weight="600">Strengths</text>
+      <path d="M53 132h164" stroke="#bae6fd" stroke-width="12" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(535 90)">
+      <rect width="270" height="190" rx="28" fill="url(#card)"/>
+      <circle cx="64" cy="62" r="34" fill="#10b981"/>
+      <text x="64" y="74" text-anchor="middle" fill="#fff" font-size="34">2</text>
+      <text x="124" y="58" fill="#0f172a" font-size="25">Explore</text>
+      <text x="124" y="95" fill="#475569" font-size="18" font-weight="600">Careers</text>
+      <path d="M53 132h164" stroke="#bbf7d0" stroke-width="12" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(95 620)">
+      <rect width="270" height="190" rx="28" fill="url(#card)"/>
+      <circle cx="64" cy="62" r="34" fill="#f59e0b"/>
+      <text x="64" y="74" text-anchor="middle" fill="#fff" font-size="34">3</text>
+      <text x="124" y="58" fill="#0f172a" font-size="25">Prepare</text>
+      <text x="124" y="95" fill="#475569" font-size="18" font-weight="600">Confidence</text>
+      <path d="M53 132h164" stroke="#fed7aa" stroke-width="12" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(535 620)">
+      <rect width="270" height="190" rx="28" fill="url(#card)"/>
+      <circle cx="64" cy="62" r="34" fill="#8b5cf6"/>
+      <text x="64" y="74" text-anchor="middle" fill="#fff" font-size="34">4</text>
+      <text x="124" y="58" fill="#0f172a" font-size="25">Apply</text>
+      <text x="124" y="95" fill="#475569" font-size="18" font-weight="600">Succeed</text>
+      <path d="M53 132h164" stroke="#ddd6fe" stroke-width="12" stroke-linecap="round"/>
+    </g>
+  </g>
+  <circle cx="450" cy="450" r="120" fill="#ffffff" opacity=".95"/>
+  <path fill="#0ea5e9" d="M450 342 540 498H360l90-156Z"/>
+  <path fill="#0f172a" d="M438 425h24v90h-24z"/>
+  <path fill="#0f172a" d="M405 455h90v24h-90z"/>
+</svg>

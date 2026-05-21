@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title id="title">Person avatar</title>
+  <rect width="160" height="160" fill="#0ea5e9"/>
+  <circle cx="80" cy="62" r="32" fill="#e0f2fe"/>
+  <path fill="#f8fafc" d="M28 160c7-39 27-60 52-60s45 21 52 60H28Z"/>
+</svg>

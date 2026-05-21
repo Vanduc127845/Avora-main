@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title id="title">Dr. Angela Pratt</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f43f5e"/>
+      <stop offset="1" stop-color="#facc15"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" fill="url(#bg)"/>
+  <circle cx="80" cy="68" r="33" fill="#f7d6c3"/>
+  <path fill="#7c2d12" d="M45 70c0-28 19-44 42-39 20 4 29 20 28 42-14-17-35-21-70-3Z"/>
+  <path fill="#fff" d="M33 160c6-36 24-56 47-56s41 20 47 56H33Z"/>
+  <path fill="#0284c7" d="M64 107h32l-16 26-16-26Z"/>
+  <text x="80" y="148" text-anchor="middle" fill="#0f172a" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="800">AP</text>
+</svg>

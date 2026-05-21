@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 96" role="img" aria-labelledby="title">
+  <title id="title">Avora</title>
+  <rect width="220" height="96" rx="2" fill="#050505"/>
+  <g fill="#fff">
+    <path d="M57.5 48 49 63H39l18.5-32L76 63H66l-8.5-15Z"/>
+    <path d="M35 47.5c0-5.3 4.3-9.5 9.5-9.5h3.1l-4.3 7.5a2.4 2.4 0 0 0 0 4.8l4.3 7.7h-3.1a10 10 0 0 1-9.5-10.5Z"/>
+    <text x="83" y="52" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="800" letter-spacing="3">AVORA</text>
+    <text x="86" y="68" font-family="Arial, Helvetica, sans-serif" font-size="8" font-weight="700" letter-spacing="2">SINCE 2024</text>
+  </g>
+  <circle cx="45" cy="48" r="2.6" fill="#38bdf8"/>
+</svg>

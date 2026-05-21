@@ -5,7 +5,7 @@ import { ArrowLeft, Mic, Square, Pause, ChevronRight, CheckCircle2, Lightbulb, A
 import { motion, AnimatePresence } from 'framer-motion';
 import { handleApiError, interviewService } from '../../../services';
 import type { InterviewResponse, InterviewSession } from '../../../lib/shared';
-import { useSpeechToText } from '../../../hooks/useSpeechToText';
+import { useInterviewSpeechToText } from '../hooks/useInterviewSpeechToText';
 
 export default function InterviewSessionPage() {
   const { id } = useParams();
@@ -19,11 +19,17 @@ export default function InterviewSessionPage() {
   const [error, setError] = React.useState<string | null>(null);
   const getResponseBaseText = React.useCallback(() => response, [response]);
   const handleSpeechEnd = React.useCallback(() => setIsRecording(false), []);
-  const speechAnswer = useSpeechToText({
+  const speechAnswer = useInterviewSpeechToText({
     getBaseText: getResponseBaseText,
     onEnd: handleSpeechEnd,
     onTranscript: setResponse,
   });
+
+  React.useEffect(() => {
+    window.dispatchEvent(new CustomEvent('avora:agent-status', {
+      detail: { agentId: 'interviews', status: 'done' },
+    }));
+  }, []);
 
   React.useEffect(() => {
     let mounted = true;
@@ -70,7 +76,7 @@ export default function InterviewSessionPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const startRecording = React.useCallback(() => {
+  const startRecording = React.useCallback(async () => {
     if (!interview) return;
 
     setError(null);
@@ -78,7 +84,7 @@ export default function InterviewSessionPage() {
     setIsRecording(true);
     setTimeRemaining(interview.config.timePerQuestion);
 
-    if (speechAnswer.isSupported && !speechAnswer.start()) {
+    if (!(await speechAnswer.start())) {
       setIsRecording(false);
     }
   }, [interview, speechAnswer]);
@@ -322,7 +328,16 @@ export default function InterviewSessionPage() {
                 </div>
 
                 <div className="flex items-center justify-center gap-4">
-                  {!isRecording ? (
+                  {speechAnswer.isTranscribing ? (
+                    <Button
+                      size="lg"
+                      className="rounded-full w-16 h-16"
+                      disabled
+                      aria-label="Transcribing speech"
+                    >
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </Button>
+                  ) : !isRecording ? (
                     <Button
                       size="lg"
                       className="rounded-full w-16 h-16"
@@ -332,7 +347,7 @@ export default function InterviewSessionPage() {
                       title={
                         speechAnswer.isSupported
                           ? 'Speak to transcribe your answer'
-                          : 'Speech-to-text is not supported; timer will still run'
+                          : 'Speech-to-text is not supported in this browser'
                       }
                     >
                       <Mic className="h-6 w-6" />
@@ -341,7 +356,7 @@ export default function InterviewSessionPage() {
                     <Button
                       size="lg"
                       variant="danger"
-                      className="rounded-full w-16 h-16 bg-red-500 hover:bg-red-600"
+                      className="rounded-full w-16 h-16 bg-red-500 hover:bg-red-600 animate-pulse"
                       onClick={stopRecording}
                       aria-label="Stop speech-to-text"
                     >
@@ -354,20 +369,22 @@ export default function InterviewSessionPage() {
                   role={speechAnswer.error ? 'alert' : 'status'}
                 >
                   {speechAnswer.error ||
-                    (isRecording
+                    (speechAnswer.isTranscribing
+                      ? 'Transcribing your recording...'
+                      : isRecording
                       ? speechAnswer.isSupported
-                        ? 'Listening and transcribing...'
+                        ? 'Recording...'
                         : 'Timer running. Speech-to-text is unavailable in this browser.'
                       : speechAnswer.isSupported
                         ? 'Use the microphone button to dictate your response.'
-                        : 'Speech-to-text requires a supported browser.')}
+                        : 'Speech-to-text is not supported in this browser. You can type your response.')}
                 </p>
 
                 <Button
                   className="w-full"
                   onClick={submitResponse}
                   isLoading={isSubmitting}
-                  disabled={!currentQuestion || response.trim().length < 5 || interview.status === 'paused'}
+                  disabled={!currentQuestion || response.trim().length < 5 || interview.status === 'paused' || speechAnswer.isTranscribing}
                 >
                   Submit Response
                   <ChevronRight className="h-4 w-4 ml-1" />

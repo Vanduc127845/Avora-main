@@ -18,6 +18,7 @@ import { aiRouter } from './routes/ai.routes.js';
 import { partnersRouter } from './routes/partners.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
 import { agentMemoryRouter } from './routes/agent-memory.routes.js';
+import { speechToTextRouter } from './routes/speech-to-text.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
 import { apiLimiter, getRateLimitStoreStatus } from './middleware/rate-limit.middleware.js';
 import { getOptionalSupabaseAdmin, hasSupabaseConfig } from './utils/supabase.js';
@@ -138,6 +139,7 @@ app.use('/api/roadmaps', roadmapsRouter);
 app.use('/api/interviews', interviewsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/agent-memory', agentMemoryRouter);
+app.use('/api/speech-to-text', speechToTextRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api', partnersRouter);
 

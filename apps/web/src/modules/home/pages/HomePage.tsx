@@ -987,7 +987,6 @@ export default function HomePage() {
                             : testimonial.author === 'Dr. Angela Pratt'
                             ? { objectPosition: 'center 5%', transform: 'scale(1.13)' }
                             : { objectPosition: 'center 20%' }
-                            
                         }
                       />
                     </div>

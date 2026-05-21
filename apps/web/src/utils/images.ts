@@ -3,11 +3,11 @@
  * Handles both local development images and Azure Blob Storage URLs
  */
 
-const AZURE_STORAGE_URL = import.meta.env.VITE_AZURE_STORAGE_URL || '/images';
+const IMAGE_BASE_URL = (import.meta.env.VITE_AZURE_STORAGE_URL || '/media').replace(/\/$/, '');
 
 /**
  * Get the full URL for an image
- * In development: returns /images/...
+ * In development: returns /media/...
  * In production: returns AZURE_STORAGE_URL/...
  */
 export function getImageUrl(path: string): string {
@@ -19,13 +19,7 @@ export function getImageUrl(path: string): string {
   // Remove leading slash for consistency
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
 
-  // Check if we have an Azure Storage URL configured
-  if (AZURE_STORAGE_URL.startsWith('http')) {
-    return `${AZURE_STORAGE_URL}/${cleanPath}`;
-  }
-
-  // Fall back to local images
-  return `/${cleanPath}`;
+  return `${IMAGE_BASE_URL}/${cleanPath}`;
 }
 
 // ============ Image Path Constants ============
@@ -54,12 +48,12 @@ export const IMAGES = {
     silviaDanailov: getImageUrl('Silvia Danailov.jpg'),
   },
 
-  // Animated illustrations (gif/webp support)
-  fourStep: getImageUrl('fourstep.gif'),
-  handshakes: getImageUrl('handshakes.gif'),
+  // Editorial illustrations
+  fourStep: getImageUrl('career-steps.svg'),
+  handshakes: getImageUrl('inclusive-partnership.svg'),
 
   // Default avatars
-  peopleLogo: getImageUrl('people.avif'),
+  peopleLogo: getImageUrl('people-avatar.svg'),
 } as const;
 
 export type ImageKey = keyof typeof IMAGES;

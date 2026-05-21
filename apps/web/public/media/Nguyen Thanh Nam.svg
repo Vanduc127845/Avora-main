@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title">
+  <title id="title">Nguyen Thanh Nam</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ef4444"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" fill="url(#bg)"/>
+  <circle cx="80" cy="68" r="34" fill="#f1c0a9"/>
+  <path fill="#27272a" d="M45 65c4-27 29-39 54-28 12 5 18 16 17 29-19-10-42-12-71-1Z"/>
+  <path fill="#f3f4f6" d="M31 160c6-35 25-55 49-55s43 20 49 55H31Z"/>
+  <path fill="#be123c" d="M64 108h32l-16 27-16-27Z"/>
+  <text x="80" y="148" text-anchor="middle" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="800">NAM</text>
+</svg>
