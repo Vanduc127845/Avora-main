@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Building2, Users, Globe, Heart, 
-  CheckCircle, Send, Loader2, Sparkles, Award, Target
+  CheckCircle, Send, Loader2, Sparkles, Award, Target,
+  AlertCircle, Moon, Sun,
 } from 'lucide-react';
 import { Button } from '../../../components/ui';
+import { handleApiError, post } from '../../../services';
 
 interface FormData {
   organizationName: string;
@@ -32,40 +34,12 @@ const stagger = {
   },
 };
 
-// Floating particle component
-const FloatingParticle = ({ delay, x, y, size }: { delay: number; x: number; y: number; size: number }) => (
-  <motion.div
-    className="absolute rounded-full bg-sky-500/20"
-    style={{
-      left: `${x}%`,
-      top: `${y}%`,
-      width: size,
-      height: size,
-    }}
-    animate={{
-      y: [0, -30, 0],
-      opacity: [0.2, 0.5, 0.2],
-      scale: [1, 1.2, 1],
-    }}
-    transition={{
-      duration: 4 + Math.random() * 2,
-      delay,
-      repeat: Infinity,
-      ease: 'easeInOut',
-    }}
-  />
-);
-
-// Glowing orb background
-const GlowOrb = ({ className, style }: { className: string; style?: React.CSSProperties }) => (
-  <div className={`absolute rounded-full blur-3xl opacity-30 ${className}`} style={style} />
-);
-
 const PartnersPage = () => {
   const [isDark, setIsDark] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submissionNote, setSubmissionNote] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     organizationName: '',
     contactPerson: '',
@@ -77,38 +51,34 @@ const PartnersPage = () => {
     message: '',
   });
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   const partnershipTypes = [
     { 
       id: 'employer', 
-      label: 'Inclusive Employer', 
+      label: 'Nhà tuyển dụng hòa nhập', 
       icon: Building2, 
-      description: 'Offer jobs and internships to our community',
-      stats: '200+ companies',
+      description: 'Đăng cơ hội việc làm, thực tập và mentorship phù hợp',
+      stats: 'Tuyển dụng',
     },
     { 
       id: 'ngo', 
-      label: 'NGO Partner', 
+      label: 'Đối tác xã hội', 
       icon: Heart, 
-      description: 'Collaborate on advocacy and programs',
-      stats: '50+ organizations',
+      description: 'Đồng hành trong chương trình hỗ trợ người khuyết tật',
+      stats: 'Cộng đồng',
     },
     { 
       id: 'education', 
-      label: 'Educational Institution', 
+      label: 'Cơ sở đào tạo', 
       icon: Users, 
-      description: 'Provide training and certifications',
-      stats: '30+ universities',
+      description: 'Cung cấp khóa học, chứng chỉ và dự án thực hành',
+      stats: 'Đào tạo',
     },
     { 
       id: 'technology', 
-      label: 'Technology Partner', 
+      label: 'Đối tác công nghệ', 
       icon: Globe, 
-      description: 'Co-develop accessible solutions',
-      stats: '15+ partners',
+      description: 'Tích hợp công cụ, dữ liệu và giải pháp trợ năng',
+      stats: 'Tích hợp',
     },
   ];
 
@@ -119,21 +89,16 @@ const PartnersPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
+    setSubmissionNote(null);
     
     try {
-      const response = await fetch('/api/partner-inquiry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        setIsSubmitted(true);
-      } else {
-        alert('Failed to submit. Please try again.');
-      }
-    } catch {
-      alert('Network error. Please try again.');
+      const result = await post<{ success: boolean; message?: string; delivery?: string }>('/api/partner-inquiry', formData);
+      setSubmissionNote(result.delivery === 'dry-run' ? result.message || 'Thông tin đã được ghi nhận ở chế độ demo.' : null);
+      setIsSubmitted(true);
+    } catch (err) {
+      const apiError = handleApiError(err);
+      setError(apiError.message || apiError.error);
     } finally {
       setIsSubmitting(false);
     }
@@ -143,22 +108,10 @@ const PartnersPage = () => {
     <div className={`min-h-screen relative overflow-hidden transition-colors duration-700 ${
       isDark ? 'bg-zinc-950' : 'bg-stone-50'
     }`}>
-      {/* Animated Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <GlowOrb className="w-96 h-96 bg-sky-500/30 -top-48 -left-48 animate-pulse" />
-        <GlowOrb className="w-80 h-80 bg-violet-500/20 top-1/3 -right-40 animate-pulse" style={{ animationDelay: '1s' }} />
-        <GlowOrb className="w-64 h-64 bg-cyan-500/20 bottom-20 left-1/4 animate-pulse" style={{ animationDelay: '2s' }} />
-        
-        {/* Floating Particles */}
-        {mounted && [...Array(12)].map((_, i) => (
-          <FloatingParticle
-            key={i}
-            delay={i * 0.3}
-            x={10 + Math.random() * 80}
-            y={10 + Math.random() * 80}
-            size={4 + Math.random() * 8}
-          />
-        ))}
+      <div className={`fixed inset-0 pointer-events-none ${
+        isDark ? 'bg-[linear-gradient(180deg,#09090b_0%,#0f172a_45%,#111827_100%)]' : 'bg-[linear-gradient(180deg,#f8fafc_0%,#eef6ff_46%,#f5f5f4_100%)]'
+      }`}>
+        <div className={`absolute inset-x-0 top-0 h-80 ${isDark ? 'bg-sky-500/10' : 'bg-sky-100/70'}`} />
       </div>
 
       {/* Grid Pattern Overlay */}
@@ -183,7 +136,7 @@ const PartnersPage = () => {
             >
               <ArrowLeft className="w-4 h-4" />
             </motion.span>
-            Back to Home
+            Về trang chủ
           </Link>
         </div>
       </header>
@@ -210,7 +163,7 @@ const PartnersPage = () => {
             >
               <Sparkles className="w-4 h-4" />
             </motion.div>
-            Join Our Mission
+            Mở rộng tác động cùng Avora
           </motion.div>
 
           <motion.h1 
@@ -218,7 +171,7 @@ const PartnersPage = () => {
               isDark ? 'text-zinc-100' : 'text-stone-900'
             }`}
           >
-            Become a{' '}
+            Trở thành{' '}
             <span className={`relative ${
               isDark ? 'text-sky-400' : 'text-sky-600'
             }`}>
@@ -228,7 +181,7 @@ const PartnersPage = () => {
                 animate={{ backgroundSize: '100% 100%' }}
                 transition={{ duration: 1, delay: 0.5 }}
               >
-                Partner
+                đối tác Avora
               </motion.span>
               <motion.span
                 className={`absolute -bottom-2 left-0 h-3 rounded-full ${
@@ -246,8 +199,7 @@ const PartnersPage = () => {
               isDark ? 'text-zinc-400' : 'text-stone-600'
             }`}
           >
-            Together, we can create more inclusive workplaces and career opportunities 
-            for people with disabilities. Join us in making a difference.
+            Kết nối nhà tuyển dụng, tổ chức xã hội, trường học và đối tác công nghệ để tạo thêm cơ hội nghề nghiệp tiếp cận được cho người khuyết tật.
           </motion.p>
 
           {/* Stats Row */}
@@ -258,9 +210,9 @@ const PartnersPage = () => {
             className="flex items-center justify-center gap-8 mt-12"
           >
             {[
-              { icon: Award, value: '295+', label: 'Partners' },
-              { icon: Target, value: '50K+', label: 'Careers Matched' },
-              { icon: Users, value: '10K+', label: 'Lives Impacted' },
+              { icon: Award, value: '4', label: 'Nhóm hợp tác' },
+              { icon: Target, value: '24-48h', label: 'Phản hồi' },
+              { icon: Users, value: '100%', label: 'Ưu tiên tiếp cận' },
             ].map((stat, i) => {
               const Icon = stat.icon;
               return (
@@ -358,13 +310,7 @@ const PartnersPage = () => {
               : 'bg-white/80 border border-stone-200/60 backdrop-blur-xl shadow-2xl shadow-stone-200/30'
           }`}
         >
-          {/* Decorative corner glow */}
-          <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl ${
-            isDark ? 'bg-sky-500/10' : 'bg-sky-400/10'
-          }`} />
-          <div className={`absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl ${
-            isDark ? 'bg-violet-500/10' : 'bg-violet-400/10'
-          }`} />
+          <div className={`absolute inset-x-0 top-0 h-1 ${isDark ? 'bg-sky-400' : 'bg-sky-500'}`} />
 
           <AnimatePresence mode="wait">
             {isSubmitted ? (
@@ -403,7 +349,7 @@ const PartnersPage = () => {
                     isDark ? 'text-zinc-100' : 'text-stone-900'
                   }`}
                 >
-                  Thank you for your interest!
+                  Đã nhận thông tin hợp tác
                 </motion.h2>
                 
                 <motion.p 
@@ -412,8 +358,16 @@ const PartnersPage = () => {
                   transition={{ delay: 0.5 }}
                   className={`mb-10 ${isDark ? 'text-zinc-400' : 'text-stone-600'}`}
                 >
-                  We've received your partnership inquiry and will get back to you within 24-48 hours.
+                  Avora sẽ phản hồi trong 24-48 giờ. Cảm ơn bạn đã đồng hành xây dựng môi trường nghề nghiệp hòa nhập hơn.
                 </motion.p>
+
+                {submissionNote && (
+                  <p className={`mb-6 rounded-xl px-4 py-3 text-sm ${
+                    isDark ? 'bg-amber-500/10 text-amber-200' : 'bg-amber-50 text-amber-800'
+                  }`}>
+                    {submissionNote}
+                  </p>
+                )}
                 
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -421,7 +375,7 @@ const PartnersPage = () => {
                   transition={{ delay: 0.6 }}
                 >
                   <Button onClick={() => window.location.href = '/'}>
-                    Return Home
+                    Về trang chủ
                   </Button>
                 </motion.div>
               </motion.div>
@@ -434,6 +388,15 @@ const PartnersPage = () => {
                 onSubmit={handleSubmit} 
                 className="space-y-6 relative"
               >
+                {error && (
+                  <div className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+                    isDark ? 'border-red-500/30 bg-red-500/10 text-red-200' : 'border-red-200 bg-red-50 text-red-700'
+                  }`} role="alert">
+                    <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
                 <div className="grid sm:grid-cols-2 gap-6">
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
@@ -443,7 +406,7 @@ const PartnersPage = () => {
                     <label className={`block text-sm font-medium mb-2 ${
                       isDark ? 'text-zinc-300' : 'text-stone-700'
                     }`}>
-                      Organization Name *
+                      Tên tổ chức *
                     </label>
                     <motion.input
                       whileFocus={{ scale: 1.01 }}
@@ -458,7 +421,7 @@ const PartnersPage = () => {
                           ? 'bg-zinc-800/60 border-zinc-700/60 text-zinc-100 focus:bg-zinc-800 focus:border-sky-500/60 focus:ring-2 focus:ring-sky-500/20' 
                           : 'bg-stone-50/80 border-stone-300/60 text-stone-900 focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
                       } focus:outline-none`}
-                      placeholder="Acme Corporation"
+                      placeholder="Công ty ABC"
                     />
                   </motion.div>
                   
@@ -470,7 +433,7 @@ const PartnersPage = () => {
                     <label className={`block text-sm font-medium mb-2 ${
                       isDark ? 'text-zinc-300' : 'text-stone-700'
                     }`}>
-                      Contact Person *
+                      Người liên hệ *
                     </label>
                     <motion.input
                       whileFocus={{ scale: 1.01 }}
@@ -485,7 +448,7 @@ const PartnersPage = () => {
                           ? 'bg-zinc-800/60 border-zinc-700/60 text-zinc-100 focus:bg-zinc-800 focus:border-sky-500/60 focus:ring-2 focus:ring-sky-500/20' 
                           : 'bg-stone-50/80 border-stone-300/60 text-stone-900 focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
                       } focus:outline-none`}
-                      placeholder="Sarah Johnson"
+                      placeholder="Nguyễn Minh Anh"
                     />
                   </motion.div>
                 </div>
@@ -499,7 +462,7 @@ const PartnersPage = () => {
                     <label className={`block text-sm font-medium mb-2 ${
                       isDark ? 'text-zinc-300' : 'text-stone-700'
                     }`}>
-                      Email Address *
+                      Email *
                     </label>
                     <motion.input
                       whileFocus={{ scale: 1.01 }}
@@ -514,7 +477,7 @@ const PartnersPage = () => {
                           ? 'bg-zinc-800/60 border-zinc-700/60 text-zinc-100 focus:bg-zinc-800 focus:border-sky-500/60 focus:ring-2 focus:ring-sky-500/20' 
                           : 'bg-stone-50/80 border-stone-300/60 text-stone-900 focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
                       } focus:outline-none`}
-                      placeholder="sarah@acme.com"
+                      placeholder="minhanh@example.com"
                     />
                   </motion.div>
                   
@@ -526,7 +489,7 @@ const PartnersPage = () => {
                     <label className={`block text-sm font-medium mb-2 ${
                       isDark ? 'text-zinc-300' : 'text-stone-700'
                     }`}>
-                      Phone Number
+                      Số điện thoại
                     </label>
                     <motion.input
                       whileFocus={{ scale: 1.01 }}
@@ -554,7 +517,7 @@ const PartnersPage = () => {
                     <label className={`block text-sm font-medium mb-2 ${
                       isDark ? 'text-zinc-300' : 'text-stone-700'
                     }`}>
-                      Company Size
+                      Quy mô tổ chức
                     </label>
                     <motion.select
                       whileFocus={{ scale: 1.01 }}
@@ -568,11 +531,11 @@ const PartnersPage = () => {
                           : 'bg-stone-50/80 border-stone-300/60 text-stone-900 focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
                       } focus:outline-none`}
                     >
-                      <option value="">Select size</option>
-                      <option value="1-50">1-50 employees</option>
-                      <option value="51-200">51-200 employees</option>
-                      <option value="201-1000">201-1000 employees</option>
-                      <option value="1000+">1000+ employees</option>
+                      <option value="">Chọn quy mô</option>
+                      <option value="1-50">1-50 nhân sự</option>
+                      <option value="51-200">51-200 nhân sự</option>
+                      <option value="201-1000">201-1000 nhân sự</option>
+                      <option value="1000+">Trên 1000 nhân sự</option>
                     </motion.select>
                   </motion.div>
                   
@@ -584,7 +547,7 @@ const PartnersPage = () => {
                     <label className={`block text-sm font-medium mb-2 ${
                       isDark ? 'text-zinc-300' : 'text-stone-700'
                     }`}>
-                      Partnership Type *
+                      Hình thức hợp tác *
                     </label>
                     <motion.select
                       whileFocus={{ scale: 1.01 }}
@@ -599,7 +562,7 @@ const PartnersPage = () => {
                           : 'bg-stone-50/80 border-stone-300/60 text-stone-900 focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
                       } focus:outline-none`}
                     >
-                      <option value="">Select type</option>
+                      <option value="">Chọn hình thức</option>
                       {partnershipTypes.map((type) => (
                         <option key={type.id} value={type.id}>{type.label}</option>
                       ))}
@@ -615,7 +578,7 @@ const PartnersPage = () => {
                   <label className={`block text-sm font-medium mb-2 ${
                     isDark ? 'text-zinc-300' : 'text-stone-700'
                   }`}>
-                    Website URL
+                    Website
                   </label>
                   <motion.input
                     whileFocus={{ scale: 1.01 }}
@@ -641,7 +604,7 @@ const PartnersPage = () => {
                   <label className={`block text-sm font-medium mb-2 ${
                     isDark ? 'text-zinc-300' : 'text-stone-700'
                   }`}>
-                    Tell us about your partnership goals
+                    Mục tiêu hợp tác
                   </label>
                   <motion.textarea
                     whileFocus={{ scale: 1.01, y: 0 }}
@@ -655,7 +618,7 @@ const PartnersPage = () => {
                         ? 'bg-zinc-800/60 border-zinc-700/60 text-zinc-100 focus:bg-zinc-800 focus:border-sky-500/60 focus:ring-2 focus:ring-sky-500/20' 
                         : 'bg-stone-50/80 border-stone-300/60 text-stone-900 focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
                     } focus:outline-none`}
-                    placeholder="How would you like to collaborate with us?"
+                    placeholder="Bạn muốn hợp tác với Avora theo cách nào?"
                   />
                 </motion.div>
 
@@ -678,7 +641,7 @@ const PartnersPage = () => {
                         className="flex items-center justify-center"
                       >
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Submitting...
+                        Đang gửi...
                       </motion.span>
                     ) : (
                       <motion.span
@@ -686,7 +649,7 @@ const PartnersPage = () => {
                         animate={{ opacity: 1 }}
                         className="flex items-center justify-center"
                       >
-                        Submit Partnership Inquiry
+                        Gửi thông tin hợp tác
                         <Send className="w-5 h-5 ml-2" />
                       </motion.span>
                     )}
@@ -716,7 +679,7 @@ const PartnersPage = () => {
             animate={{ rotate: isDark ? 0 : 180 }}
             transition={{ duration: 0.5 }}
           >
-            {isDark ? '☀️' : '🌙'}
+            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </motion.div>
         </motion.button>
       </main>

@@ -1,5 +1,5 @@
 import { get, post, type ApiRequestConfig } from './api';
-import type { InterviewSession, InterviewQuestion, InterviewFeedback } from '../lib/shared';
+import type { InterviewSession, InterviewQuestion, InterviewFeedback, InterviewResponse } from '../lib/shared';
 
 export const interviewService = {
   async getInterviews(config?: ApiRequestConfig): Promise<{ interviews: InterviewSession[] }> {
@@ -34,8 +34,8 @@ export const interviewService = {
   async submitResponse(
     id: string,
     data: { questionId: string; response: string; audioUrl?: string }
-  ): Promise<{ feedback: any }> {
-    return post<{ feedback: any }>(`/api/interviews/${id}/respond`, data);
+  ): Promise<{ response: InterviewResponse; feedback: InterviewResponse['feedback']; interview: InterviewSession }> {
+    return post<{ response: InterviewResponse; feedback: InterviewResponse['feedback']; interview: InterviewSession }>(`/api/interviews/${id}/respond`, data);
   },
 
   async pauseInterview(id: string): Promise<{ interview: InterviewSession }> {

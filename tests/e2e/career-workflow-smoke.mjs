@@ -1,7 +1,7 @@
 const apiUrl = (process.env.API_URL || 'http://localhost:4000').replace(/\/$/, '');
 const webUrl = (process.env.WEB_URL || 'http://localhost:3000').replace(/\/$/, '');
 
-const email = `workflow-${Date.now()}@avora.local`;
+const email = `workflow-${Date.now()}@avora.dev`;
 const password = 'WorkflowTest123!';
 
 async function assertOkPage(path) {

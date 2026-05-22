@@ -27,6 +27,7 @@ import { AIService } from './services/ai.service.js';
 const app: Express = express();
 const PORT = process.env.PORT || 4000;
 const readinessAiService = new AIService();
+const SUPABASE_READINESS_TIMEOUT_MS = Number(process.env.SUPABASE_READINESS_TIMEOUT_MS || 3500);
 
 const allowedOrigins = new Set(
   (process.env.CORS_ORIGIN || 'http://localhost:3000,http://127.0.0.1:3000')
@@ -95,17 +96,37 @@ app.get('/ready', async (_req, res) => {
   };
 
   if (supabase) {
-    const { error } = await supabase
-      .from('profiles')
-      .select('id', { head: true, count: 'exact' })
-      .limit(1);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), SUPABASE_READINESS_TIMEOUT_MS);
 
-    database = {
-      ok: !error,
-      configured: true,
-      mode: 'supabase',
-      message: error ? error.message : 'Supabase reachable',
-    };
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .select('id', { head: true, count: 'exact' })
+        .limit(1)
+        .abortSignal(controller.signal);
+
+      database = {
+        ok: !error,
+        configured: true,
+        mode: 'supabase',
+        message: error ? error.message : 'Supabase reachable',
+      };
+    } catch (error) {
+      database = {
+        ok: false,
+        configured: true,
+        mode: 'supabase',
+        message:
+          error instanceof Error && error.name === 'AbortError'
+            ? `Supabase readiness check timed out after ${SUPABASE_READINESS_TIMEOUT_MS}ms`
+            : error instanceof Error
+              ? error.message
+              : 'Supabase readiness check failed',
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   const checks = {

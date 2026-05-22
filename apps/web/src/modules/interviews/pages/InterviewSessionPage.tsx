@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Card, CardContent, Button } from '../../../components/ui';
-import { ArrowLeft, Mic, Square, Pause, ChevronRight, CheckCircle2, Lightbulb, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mic, Square, Pause, ChevronRight, CheckCircle2, Lightbulb, AlertCircle, Loader2, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { handleApiError, interviewService } from '../../../services';
 import type { InterviewResponse, InterviewSession } from '../../../lib/shared';
@@ -14,6 +14,7 @@ export default function InterviewSessionPage() {
   const [isRecording, setIsRecording] = React.useState(false);
   const [response, setResponse] = React.useState('');
   const [lastFeedback, setLastFeedback] = React.useState<InterviewResponse['feedback'] | null>(null);
+  const [lastInterviewerReply, setLastInterviewerReply] = React.useState<string | null>(null);
   const [timeRemaining, setTimeRemaining] = React.useState(120);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -41,7 +42,10 @@ export default function InterviewSessionPage() {
       try {
         const response = await interviewService.getInterview(id);
         if (!mounted) return;
+        const latestResponse = response.interview.responses[response.interview.responses.length - 1];
         setInterview(response.interview);
+        setLastFeedback(latestResponse?.feedback || null);
+        setLastInterviewerReply(latestResponse?.interviewerReply || null);
         setTimeRemaining(response.interview.config.timePerQuestion);
       } catch (err) {
         if (!mounted) return;
@@ -69,6 +73,7 @@ export default function InterviewSessionPage() {
 
   const currentQuestion = interview?.questions[interview.currentQuestionIndex];
   const isComplete = interview?.status === 'completed';
+  const currentInterviewerPrompt = currentQuestion?.interviewerPrompt || currentQuestion?.text || 'No more questions.';
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -119,11 +124,11 @@ export default function InterviewSessionPage() {
         questionId: currentQuestion.id,
         response: response.trim(),
       });
-      const updated = await interviewService.getInterview(interview.id);
-      setInterview(updated.interview);
+      setInterview(result.interview);
       setLastFeedback(result.feedback);
+      setLastInterviewerReply(result.response.interviewerReply || null);
       setResponse('');
-      setTimeRemaining(updated.interview.config.timePerQuestion);
+      setTimeRemaining(result.interview.config.timePerQuestion);
     } catch (err) {
       const apiError = handleApiError(err);
       setError(apiError.message || apiError.error);
@@ -158,6 +163,9 @@ export default function InterviewSessionPage() {
       </div>
     );
   }
+
+  const latestStoredResponse = interview.responses[interview.responses.length - 1];
+  const completionInterviewerReply = lastInterviewerReply || latestStoredResponse?.interviewerReply || null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -209,6 +217,18 @@ export default function InterviewSessionPage() {
               </div>
             </div>
 
+            {completionInterviewerReply && (
+              <div className="flex items-start gap-3 rounded-xl border border-primary-100 bg-primary-50 p-4">
+                <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary-600 text-white">
+                  <MessageCircle className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-primary-900">AI interviewer</p>
+                  <p className="mt-1 text-sm leading-6 text-primary-900">{completionInterviewerReply}</p>
+                </div>
+              </div>
+            )}
+
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <h3 className="font-semibold text-gray-900 mb-3">Strengths</h3>
@@ -254,23 +274,34 @@ export default function InterviewSessionPage() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              <Card className="bg-gradient-to-br from-primary-50 to-accent-50 border-primary-100">
+              <Card className="border-primary-100 bg-primary-50">
                 <CardContent>
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-primary-600 font-bold">{interview.currentQuestionIndex + 1}</span>
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-600 text-white">
+                      <MessageCircle className="h-5 w-5" />
                     </div>
-                    <div>
-                      <span className="px-2 py-0.5 bg-primary-100 text-primary-700 rounded text-xs font-medium">
-                        {currentQuestion?.type || 'question'}
-                      </span>
-                      <h2 className="text-xl font-semibold text-gray-900 mt-2">
-                        {currentQuestion?.text || 'No more questions.'}
-                      </h2>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-primary-900">AI interviewer</span>
+                        <span className="px-2 py-0.5 bg-white text-primary-700 rounded text-xs font-medium">
+                          Question {interview.currentQuestionIndex + 1}
+                        </span>
+                        <span className="px-2 py-0.5 bg-white text-primary-700 rounded text-xs font-medium">
+                          {currentQuestion?.type || 'question'}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-xl font-semibold leading-8 text-gray-900">
+                        {currentInterviewerPrompt}
+                      </p>
+                      {currentQuestion?.interviewerPrompt && currentQuestion.interviewerPrompt !== currentQuestion.text && (
+                        <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm leading-6 text-gray-600">
+                          {currentQuestion.text}
+                        </p>
+                      )}
                     </div>
                   </div>
                   {currentQuestion?.accessibilityNotes && (
-                    <div className="flex items-start gap-2 p-3 bg-white rounded-lg">
+                    <div className="mt-4 flex items-start gap-2 p-3 bg-white rounded-lg">
                       <Lightbulb className="h-5 w-5 text-warning-500 flex-shrink-0 mt-0.5" />
                       <p className="text-sm text-gray-600">{currentQuestion.accessibilityNotes}</p>
                     </div>
@@ -284,6 +315,17 @@ export default function InterviewSessionPage() {
             <CardContent>
               {lastFeedback && (
                 <div className="space-y-4 mb-6">
+                  {lastInterviewerReply && (
+                    <div className="flex items-start gap-3 rounded-xl border border-primary-100 bg-primary-50 p-4">
+                      <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary-600 text-white">
+                        <MessageCircle className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-primary-900">AI interviewer</p>
+                        <p className="mt-1 text-sm leading-6 text-primary-900">{lastInterviewerReply}</p>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 p-4 bg-success-50 rounded-xl">
                     <CheckCircle2 className="h-6 w-6 text-success-600" />
                     <div>

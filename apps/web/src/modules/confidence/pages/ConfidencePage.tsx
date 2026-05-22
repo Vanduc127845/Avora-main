@@ -30,16 +30,16 @@ type ConfidenceEntry = {
 const storageKey = (userId?: string) => `avora-confidence-${userId || 'demo'}`;
 
 const moods: { id: Mood; label: string; helper: string }[] = [
-  { id: 'steady', label: 'Steady', helper: 'I can continue with a small plan.' },
-  { id: 'uncertain', label: 'Uncertain', helper: 'I need clarity before moving.' },
-  { id: 'blocked', label: 'Blocked', helper: 'Something is stopping progress.' },
-  { id: 'confident', label: 'Confident', helper: 'I am ready to act.' },
+  { id: 'steady', label: 'Ổn định', helper: 'Tôi có thể đi tiếp với một kế hoạch nhỏ.' },
+  { id: 'uncertain', label: 'Phân vân', helper: 'Tôi cần làm rõ trước khi hành động.' },
+  { id: 'blocked', label: 'Đang kẹt', helper: 'Có điều gì đó đang chặn tiến độ.' },
+  { id: 'confident', label: 'Tự tin', helper: 'Tôi đã sẵn sàng hành động.' },
 ];
 
 const supportPrompts = [
-  'Write a short self-advocacy script for asking written instructions.',
-  'Help me turn today\'s blocker into one small action.',
-  'Remind me how to explain my strengths in an interview.',
+  'Viết giúp tôi một kịch bản ngắn để xin hướng dẫn bằng văn bản.',
+  'Giúp tôi biến điều đang kẹt hôm nay thành một hành động nhỏ.',
+  'Nhắc tôi cách trình bày điểm mạnh trong phỏng vấn.',
 ];
 
 export default function ConfidencePage() {
@@ -75,8 +75,8 @@ export default function ConfidencePage() {
       context: {
         agentId: 'confidence',
         routePath: '/confidence',
-        moduleTitle: 'Confidence',
-        moduleScope: 'Self-advocacy, confidence, blockers, and practical support scripts',
+        moduleTitle: 'Tự tin ứng tuyển',
+        moduleScope: 'Tự biện hộ, xây dựng tự tin, xử lý blocker và kịch bản hỗ trợ thực tế',
         moduleContext: {
           recentEntries: entries.slice(0, 5),
           currentMood: mood,
@@ -93,7 +93,7 @@ export default function ConfidencePage() {
 
   const saveCheckIn = async () => {
     if (!win.trim() && !blocker.trim() && !nextStep.trim()) {
-      setError('Add at least one note before saving a confidence check-in.');
+      setError('Hãy nhập ít nhất một ghi chú trước khi lưu check-in.');
       return;
     }
 
@@ -102,7 +102,7 @@ export default function ConfidencePage() {
 
     try {
       const reply = await askCoach(
-        `Create a short confidence coaching response from this check-in. Mood: ${mood}. Win: ${win}. Blocker: ${blocker}. Next step: ${nextStep}. Give 2 practical actions and one short script if useful.`,
+        `Tạo phản hồi coaching ngắn từ check-in này. Tâm trạng: ${mood}. Điểm tốt: ${win}. Điều đang kẹt: ${blocker}. Bước tiếp theo: ${nextStep}. Đưa 2 hành động thực tế và một kịch bản ngắn nếu hữu ích.`,
         { win, blocker, nextStep }
       );
       const entry: ConfidenceEntry = {
@@ -148,18 +148,18 @@ export default function ConfidencePage() {
   };
 
   const achievements = [
-    { title: 'First check-in', unlocked: entries.length >= 1, helper: 'Save one confidence note.' },
-    { title: 'Pattern finder', unlocked: entries.length >= 3, helper: 'Track three moments.' },
-    { title: 'Self-advocate', unlocked: entries.some((entry) => entry.coachReply.toLowerCase().includes('script')), helper: 'Generate a support script.' },
-    { title: 'Next action', unlocked: entries.some((entry) => Boolean(entry.nextStep)), helper: 'Commit to one next step.' },
+    { title: 'Check-in đầu tiên', unlocked: entries.length >= 1, helper: 'Lưu một ghi chú tự tin.' },
+    { title: 'Nhận diện mô thức', unlocked: entries.length >= 3, helper: 'Theo dõi ba khoảnh khắc.' },
+    { title: 'Tự biện hộ', unlocked: entries.some((entry) => entry.coachReply.toLowerCase().includes('script') || entry.coachReply.toLowerCase().includes('kịch bản')), helper: 'Tạo một kịch bản hỗ trợ.' },
+    { title: 'Hành động tiếp theo', unlocked: entries.some((entry) => Boolean(entry.nextStep)), helper: 'Cam kết một bước nhỏ.' },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="heading-2 mb-2">Confidence Agent</h1>
+        <h1 className="heading-2 mb-2">Agent tự tin</h1>
         <p className="text-gray-600">
-          Track wins, blockers, and support scripts so Avora can help you move forward without generic advice.
+          Ghi lại điểm mạnh, điều đang kẹt và kịch bản hỗ trợ để Avora đưa ra bước tiếp theo thực tế hơn.
         </p>
       </div>
 
@@ -174,12 +174,12 @@ export default function ConfidencePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Heart className="h-5 w-5 text-primary-600" />
-              Daily Check-in
+              Check-in hằng ngày
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             <div>
-              <label className="label">How do you feel about career progress today?</label>
+              <label className="label">Hôm nay bạn cảm thấy thế nào về tiến độ nghề nghiệp?</label>
               <div className="grid gap-2 sm:grid-cols-4">
                 {moods.map((item) => (
                   <button
@@ -201,36 +201,36 @@ export default function ConfidencePage() {
 
             <div className="grid gap-4 lg:grid-cols-3">
               <div>
-                <label className="label">One win</label>
+                <label className="label">Một điểm tốt</label>
                 <textarea
                   className="input min-h-[130px] resize-none"
                   value={win}
                   onChange={(event) => setWin(event.target.value)}
-                  placeholder="Example: I finished a React lesson."
+                  placeholder="Ví dụ: Tôi đã hoàn thành một bài React."
                 />
               </div>
               <div>
-                <label className="label">Current blocker</label>
+                <label className="label">Điều đang kẹt</label>
                 <textarea
                   className="input min-h-[130px] resize-none"
                   value={blocker}
                   onChange={(event) => setBlocker(event.target.value)}
-                  placeholder="Example: I do not know what to practice next."
+                  placeholder="Ví dụ: Tôi chưa biết nên luyện gì tiếp theo."
                 />
               </div>
               <div>
-                <label className="label">Next small step</label>
+                <label className="label">Bước nhỏ tiếp theo</label>
                 <textarea
                   className="input min-h-[130px] resize-none"
                   value={nextStep}
                   onChange={(event) => setNextStep(event.target.value)}
-                  placeholder="Example: Build a small accessible form."
+                  placeholder="Ví dụ: Tạo một form nhỏ có hỗ trợ bàn phím."
                 />
               </div>
             </div>
 
             <Button onClick={saveCheckIn} isLoading={isSaving} leftIcon={<Plus className="h-4 w-4" />}>
-              Save check-in and get AI coaching
+              Lưu check-in và nhận gợi ý AI
             </Button>
           </CardContent>
         </Card>
@@ -239,7 +239,7 @@ export default function ConfidencePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary-600" />
-              Personalized Support
+              Hỗ trợ cá nhân hóa
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -247,12 +247,12 @@ export default function ConfidencePage() {
               {isCoaching || isSaving ? (
                 <div className="flex items-center gap-2 text-primary-700">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Confidence Agent is thinking...
+                  Agent tự tin đang phân tích...
                 </div>
               ) : coachReply ? (
                 <p className="whitespace-pre-wrap leading-7">{coachReply}</p>
               ) : (
-                <p>Ask for a script, a confidence reset, or one next action based on your current blocker.</p>
+                <p>Hỏi về kịch bản giao tiếp, cách lấy lại tự tin hoặc một bước nhỏ dựa trên điều bạn đang kẹt.</p>
               )}
             </div>
 
@@ -277,9 +277,9 @@ export default function ConfidencePage() {
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') requestCoach();
                 }}
-                placeholder="Ask Confidence Agent..."
+                placeholder="Hỏi Agent tự tin..."
               />
-              <Button onClick={() => requestCoach()} isLoading={isCoaching} aria-label="Ask Confidence Agent">
+              <Button onClick={() => requestCoach()} isLoading={isCoaching} aria-label="Hỏi Agent tự tin">
                 <MessageSquareText className="h-5 w-5" />
               </Button>
             </div>
@@ -292,7 +292,7 @@ export default function ConfidencePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Star className="h-5 w-5 text-warning-500" />
-              Achievements
+              Thành tựu
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -323,14 +323,14 @@ export default function ConfidencePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary-600" />
-              Success Journal
+              Nhật ký tiến bộ
             </CardTitle>
           </CardHeader>
           <CardContent>
             {entries.length === 0 ? (
               <div className="rounded-2xl bg-gray-50 p-6 text-center">
-                <p className="font-medium text-gray-900">No confidence entries yet.</p>
-                <p className="mt-1 text-sm text-gray-500">Save a check-in to start tracking your progress.</p>
+                <p className="font-medium text-gray-900">Chưa có ghi chú tự tin.</p>
+                <p className="mt-1 text-sm text-gray-500">Lưu một check-in để bắt đầu theo dõi tiến độ.</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -344,9 +344,9 @@ export default function ConfidencePage() {
                           </span>
                           <span className="text-xs text-gray-500">{new Date(entry.createdAt).toLocaleString()}</span>
                         </div>
-                        {entry.win && <p className="mt-3 text-sm text-gray-700"><span className="font-semibold">Win:</span> {entry.win}</p>}
-                        {entry.blocker && <p className="mt-1 text-sm text-gray-700"><span className="font-semibold">Blocker:</span> {entry.blocker}</p>}
-                        {entry.nextStep && <p className="mt-1 text-sm text-gray-700"><span className="font-semibold">Next:</span> {entry.nextStep}</p>}
+                        {entry.win && <p className="mt-3 text-sm text-gray-700"><span className="font-semibold">Điểm tốt:</span> {entry.win}</p>}
+                        {entry.blocker && <p className="mt-1 text-sm text-gray-700"><span className="font-semibold">Đang kẹt:</span> {entry.blocker}</p>}
+                        {entry.nextStep && <p className="mt-1 text-sm text-gray-700"><span className="font-semibold">Tiếp theo:</span> {entry.nextStep}</p>}
                         <p className="mt-3 whitespace-pre-wrap rounded-xl bg-white p-3 text-sm leading-6 text-gray-700">
                           {entry.coachReply}
                         </p>
@@ -355,7 +355,7 @@ export default function ConfidencePage() {
                         type="button"
                         onClick={() => deleteEntry(entry.id)}
                         className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                        aria-label="Delete confidence entry"
+                        aria-label="Xóa ghi chú tự tin"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>

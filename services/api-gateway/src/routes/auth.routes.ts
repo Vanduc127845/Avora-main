@@ -5,7 +5,11 @@ import jwt from 'jsonwebtoken';
 import { AppError } from '../middleware/error.middleware.js';
 import { createId, demoPasswordResetTokens, demoProfiles, demoUsers } from '../data/demo-store.js';
 import { saveDemoData } from '../data/demo-persistence.js';
-import { getOptionalSupabaseAdmin, getSupabaseAdmin } from '../utils/supabase.js';
+import {
+  getOptionalSupabaseAdmin,
+  getOptionalSupabaseAuthClient,
+  getSupabaseAuthClient,
+} from '../utils/supabase.js';
 import type { UserProfile } from '../types/shared.js';
 
 const router: Router = Router();
@@ -72,6 +76,10 @@ const ensureProfile = (user: { id: string; email: string; name: string }) => {
 
 const findDemoUserByEmail = (email: string) =>
   [...demoUsers.values()].find((user) => user.email.toLowerCase() === email.toLowerCase());
+
+const isPasswordResetDryRun = () =>
+  process.env.AUTH_PASSWORD_RESET_DRY_RUN === 'true' ||
+  (process.env.NODE_ENV !== 'production' && process.env.AUTH_PASSWORD_RESET_DRY_RUN !== 'false');
 
 router.post('/register',
   body('email').isEmail().normalizeEmail(),
@@ -158,7 +166,7 @@ router.post('/login',
       }
 
       const { email, password } = req.body;
-      const supabase = getOptionalSupabaseAdmin();
+      const supabase = getOptionalSupabaseAuthClient();
 
       if (!supabase) {
         const demoUser = findDemoUserByEmail(email);
@@ -213,9 +221,17 @@ router.post('/forgot-password',
       }
 
       const { email } = req.body;
-      const supabase = getOptionalSupabaseAdmin();
+      const supabase = getOptionalSupabaseAuthClient();
 
       if (supabase) {
+        if (isPasswordResetDryRun()) {
+          res.json({
+            message: 'Password reset instructions sent if the email exists.',
+            delivery: 'dry-run',
+          });
+          return;
+        }
+
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${frontendUrl}/login?mode=reset`,
@@ -303,7 +319,7 @@ router.get('/oauth/:provider', async (req, res, next) => {
     }
 
     const redirectUrl = `${req.protocol}://${req.get('host')}/api/auth/oauth/${provider}/callback`;
-    const supabase = getSupabaseAdmin();
+    const supabase = getSupabaseAuthClient();
 
     const oauthProvider = provider === 'microsoft' ? 'azure' : 'google';
 

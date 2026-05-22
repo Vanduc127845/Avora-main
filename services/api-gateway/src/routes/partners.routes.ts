@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Resend } from 'resend';
 import { z } from 'zod';
+import { logger } from '../utils/logger.js';
 
 export const partnersRouter: Router = Router();
 
@@ -15,6 +16,14 @@ const partnerSchema = z.object({
   message: z.string().optional(),
 });
 
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
 partnersRouter.post('/partner-inquiry', async (req, res) => {
   try {
     const data = partnerSchema.parse(req.body);
@@ -25,6 +34,41 @@ partnersRouter.post('/partner-inquiry', async (req, res) => {
       education: 'Educational Institution',
       technology: 'Technology Partner',
     };
+
+    const partnershipType = partnershipTypeLabels[data.partnershipType] || data.partnershipType;
+    const safe = {
+      organizationName: escapeHtml(data.organizationName),
+      contactPerson: escapeHtml(data.contactPerson),
+      email: escapeHtml(data.email),
+      phone: data.phone ? escapeHtml(data.phone) : '',
+      website: data.website ? escapeHtml(data.website) : '',
+      companySize: data.companySize ? escapeHtml(data.companySize) : '',
+      partnershipType: escapeHtml(partnershipType),
+      message: data.message ? escapeHtml(data.message) : '',
+    };
+
+    if (!process.env.RESEND_API_KEY) {
+      logger.warn('partner-inquiry-dry-run', {
+        organizationName: data.organizationName,
+        partnershipType,
+        email: data.email,
+      });
+
+      if (process.env.NODE_ENV === 'production' && process.env.PARTNER_INQUIRY_DRY_RUN !== 'true') {
+        res.status(503).json({
+          error: 'Partner inquiry email is not configured',
+          message: 'Set RESEND_API_KEY or enable PARTNER_INQUIRY_DRY_RUN=true.',
+        });
+        return;
+      }
+
+      res.status(202).json({
+        success: true,
+        delivery: 'dry-run',
+        message: 'Partner inquiry captured in demo mode. Configure RESEND_API_KEY for email delivery.',
+      });
+      return;
+    }
 
     const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -53,42 +97,42 @@ partnersRouter.post('/partner-inquiry', async (req, res) => {
     <div class="content">
       <div class="field">
         <div class="label">Organization</div>
-        <div class="value">${data.organizationName}</div>
+        <div class="value">${safe.organizationName}</div>
       </div>
       <div class="field">
         <div class="label">Contact Person</div>
-        <div class="value">${data.contactPerson}</div>
+        <div class="value">${safe.contactPerson}</div>
       </div>
       <div class="field">
         <div class="label">Email</div>
-        <div class="value"><a href="mailto:${data.email}">${data.email}</a></div>
+        <div class="value"><a href="mailto:${safe.email}">${safe.email}</a></div>
       </div>
       ${data.phone ? `
       <div class="field">
         <div class="label">Phone</div>
-        <div class="value">${data.phone}</div>
+        <div class="value">${safe.phone}</div>
       </div>
       ` : ''}
       <div class="field">
         <div class="label">Partnership Type</div>
-        <div class="value">${partnershipTypeLabels[data.partnershipType] || data.partnershipType}</div>
+        <div class="value">${safe.partnershipType}</div>
       </div>
       ${data.companySize ? `
       <div class="field">
         <div class="label">Company Size</div>
-        <div class="value">${data.companySize} employees</div>
+        <div class="value">${safe.companySize} employees</div>
       </div>
       ` : ''}
       ${data.website ? `
       <div class="field">
         <div class="label">Website</div>
-        <div class="value"><a href="${data.website}">${data.website}</a></div>
+        <div class="value"><a href="${safe.website}">${safe.website}</a></div>
       </div>
       ` : ''}
       ${data.message ? `
       <div class="message-box">
         <div class="label">Message</div>
-        <div class="value" style="white-space: pre-wrap;">${data.message}</div>
+        <div class="value" style="white-space: pre-wrap;">${safe.message}</div>
       </div>
       ` : ''}
     </div>
@@ -104,7 +148,7 @@ partnersRouter.post('/partner-inquiry', async (req, res) => {
     await resend.emails.send({
       from: 'Avora Partners <onboarding@resend.dev>',
       to: process.env.PARTNER_EMAIL_TO || 'homiepc2019@gmail.com',
-      subject: `New Partnership Inquiry: ${data.organizationName} - ${partnershipTypeLabels[data.partnershipType] || data.partnershipType}`,
+      subject: `New Partnership Inquiry: ${data.organizationName} - ${partnershipType}`,
       html: emailContent,
       replyTo: data.email,
     });
@@ -114,7 +158,7 @@ partnersRouter.post('/partner-inquiry', async (req, res) => {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: 'Validation failed', details: error.errors });
     } else {
-      console.error('Partner inquiry error:', error);
+      logger.error('partner-inquiry-error', { error });
       res.status(500).json({ error: 'Failed to submit partner inquiry' });
     }
   }

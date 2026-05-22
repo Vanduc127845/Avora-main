@@ -133,11 +133,41 @@ export class InterviewService {
     const interview = await this.getInterviewById(interviewId, userId);
     if (!interview) throw new Error('Interview not found');
 
-    const feedback = await this.aiService.getInterviewFeedback(userId, [data], 'practice interview');
+    const currentQuestion =
+      interview.questions.find((question) => question.id === data.questionId) ||
+      interview.questions[interview.currentQuestionIndex];
+    if (!currentQuestion) throw new Error('Question not found');
+
+    const answeredCount = interview.responses.length + 1;
+    const isComplete = answeredCount >= interview.questions.length;
+    const nextQuestion = isComplete ? undefined : interview.questions[interview.currentQuestionIndex + 1];
+    const feedback = await this.aiService.getInterviewFeedback(
+      userId,
+      [
+        {
+          ...data,
+          question: currentQuestion.text,
+          expectedPoints: currentQuestion.expectedPoints,
+          scoringCriteria: currentQuestion.scoringCriteria,
+        },
+      ],
+      'practice interview'
+    );
+    const interviewerReply = await this.aiService.generateInterviewTurnReply({
+      jobType: 'practice interview',
+      question: currentQuestion,
+      answer: data.response,
+      feedback,
+      nextQuestion,
+      questionIndex: answeredCount,
+      totalQuestions: interview.questions.length,
+      isComplete,
+    });
     const response: InterviewResponse = {
       questionId: data.questionId,
       response: data.response,
       audioUrl: data.audioUrl,
+      interviewerReply,
       feedback: {
         score: feedback.overallScore,
         strengths: feedback.strengths.slice(0, 3),
@@ -151,13 +181,13 @@ export class InterviewService {
       responses: [...interview.responses, response],
       currentQuestionIndex: Math.min(interview.currentQuestionIndex + 1, interview.questions.length - 1),
       status:
-        interview.responses.length + 1 >= interview.questions.length
+        isComplete
           ? 'completed'
           : interview.status === 'setup'
             ? 'in-progress'
             : interview.status,
-      feedback: interview.responses.length + 1 >= interview.questions.length ? feedback : interview.feedback,
-      completedAt: interview.responses.length + 1 >= interview.questions.length ? new Date() : interview.completedAt,
+      feedback: isComplete ? feedback : interview.feedback,
+      completedAt: isComplete ? new Date() : interview.completedAt,
     };
 
     const saved = await this.persistInterview(next);

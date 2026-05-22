@@ -174,6 +174,17 @@ const getProviderRetryConfig = () => ({
 const uniqueStrings = (values: string[]) =>
   [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 
+const cleanShortText = (value: unknown, fallback: string, maxLength = 520) => {
+  const text = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+  if (!text) return fallback;
+  return text.length > maxLength ? `${text.slice(0, maxLength - 3).trim()}...` : text;
+};
+
+const buildInterviewerPrompt = (questionText: string, type?: string) => {
+  const questionType = type ? `${type} question` : 'question';
+  return `Let's talk through a ${questionType}. ${questionText}`;
+};
+
 const skillKey = (value: string) =>
   normalizeVietnamese(value)
     .replace(/[^a-z0-9+#. ]/g, ' ')
@@ -1193,7 +1204,8 @@ Return {"careers":[{"title": string, "matchScore": number, "reasoning": string, 
 Focus areas from the job gap analysis: ${focusAreas.join(', ') || 'not specified'}.
 Questions must target this selected job and the missing skills/gaps, not generic career advice.
 Include technical, behavioral, situational, and disability accommodation/disclosure coaching where appropriate.
-Return {"questions":[{"id": string, "text": string, "type": string, "difficulty": string, "followUpQuestions": string[], "expectedPoints": string[], "scoringCriteria": string[], "accessibilityNotes": string}]}.`,
+For each question, include interviewerPrompt: a natural interviewer line in 1-2 short sentences that asks the same question like a real person.
+Return {"questions":[{"id": string, "text": string, "interviewerPrompt": string, "type": string, "difficulty": string, "followUpQuestions": string[], "expectedPoints": string[], "scoringCriteria": string[], "accessibilityNotes": string}]}.`,
           },
         ],
         true
@@ -1225,6 +1237,51 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
     }
 
     return this.useFallback(() => this.fallbackFeedback(responses));
+  }
+
+  async generateInterviewTurnReply(input: {
+    jobType: string;
+    question: InterviewQuestion;
+    answer: string;
+    feedback: InterviewFeedback;
+    nextQuestion?: InterviewQuestion;
+    questionIndex: number;
+    totalQuestions: number;
+    isComplete: boolean;
+  }): Promise<string> {
+    const fallback = this.fallbackInterviewTurnReply(input);
+
+    if (this.isConfigured()) {
+      const response = await this.callModel(
+        [
+          {
+            role: 'system',
+            content:
+              'You are a realistic but supportive interviewer in a mock interview. Return valid JSON only.',
+          },
+          {
+            role: 'user',
+            content: `Write the next thing the interviewer says after the candidate answered.
+Use the candidate's language if it is clear from the answer; otherwise use English.
+Sound like a human interviewer, not a grading rubric. Use 2-4 short sentences.
+Acknowledge one concrete part of the answer, give one gentle coaching cue only if useful, and transition naturally.
+If there is a nextQuestion, do not repeat or ask that next question; the UI will show it separately.
+Do not use bullet points, markdown, scores, or labels like "strength" and "improvement".
+If the interview is complete, close the interview naturally and mention that feedback is ready.
+
+Context JSON:
+${JSON.stringify(input)}
+
+Return {"reply": string}.`,
+          },
+        ],
+        true
+      );
+      const parsed = response ? parseJsonObject<{ reply: string }>(response) : null;
+      if (parsed?.reply) return cleanShortText(parsed.reply, fallback);
+    }
+
+    return this.useFallback(() => fallback);
   }
 
   private async callAzure(messages: ChatMessage[], jsonMode = false): Promise<string | null> {
@@ -1657,6 +1714,7 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
     const base: Omit<InterviewQuestion, 'id'>[] = [
       {
         text: `This selected ${jobType} job requires ${primaryFocus}. Tell me about a time you learned or practiced that skill.`,
+        interviewerPrompt: `I'd like to start with ${primaryFocus}. Tell me about a time you learned or practiced that skill.`,
         type: 'behavioral',
         difficulty,
         followUpQuestions: ['What helped you learn?', 'How would you prove this skill to the employer?'],
@@ -1666,6 +1724,7 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       },
       {
         text: `If this employer asked you to demonstrate ${secondaryFocus}, what small project or work sample would you show?`,
+        interviewerPrompt: `Let's make this practical. If the employer asked you to demonstrate ${secondaryFocus}, what small project or work sample would you show?`,
         type: 'technical',
         difficulty,
         followUpQuestions: ['What would you build first?', 'How would you test or document it?'],
@@ -1675,6 +1734,7 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       },
       {
         text: 'How do you organize your work when tasks or communication become overwhelming?',
+        interviewerPrompt: 'I want to understand how you work under pressure. How do you organize your work when tasks or communication become overwhelming?',
         type: 'situational',
         difficulty,
         followUpQuestions: ['What tools help you?', 'How do you communicate blockers?'],
@@ -1684,6 +1744,7 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       },
       {
         text: 'What workplace setup helps you do your best work?',
+        interviewerPrompt: 'Now I want to ask about work setup. What workplace setup helps you do your best work?',
         type: 'disability',
         difficulty,
         followUpQuestions: ['How would you request that support?', 'What details would you keep private?'],
@@ -1718,6 +1779,20 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
       },
       nextSteps: ['Practice two STAR answers', 'Prepare questions about team communication', 'Save one accommodation request template'],
     };
+  }
+
+  private fallbackInterviewTurnReply(input: {
+    feedback: InterviewFeedback;
+    isComplete: boolean;
+  }): string {
+    const strength = input.feedback.strengths[0] || 'you gave me useful context';
+    const improvement = input.feedback.improvements[0] || 'try to add one specific result next time';
+
+    if (input.isComplete) {
+      return `Thank you, that gives me a clear picture. I noticed ${strength.toLowerCase()}. We will wrap the interview here, and your feedback is ready.`;
+    }
+
+    return `Thank you, that helps me understand your experience. I noticed ${strength.toLowerCase()}. For the next answer, ${improvement.toLowerCase()}. Let us move to the next question.`;
   }
 
   private createPhase(order: number, name: string, description: string, items: string[]) {
@@ -1886,9 +1961,14 @@ Return {"overallScore": number, "categories": [{"name": string, "score": number,
   }
 
   private normalizeQuestion(question: InterviewQuestion): InterviewQuestion {
+    const text = typeof question.text === 'string' && question.text.trim()
+      ? question.text.trim()
+      : 'Tell me about your relevant experience for this role.';
+
     return {
       id: question.id || createId('q'),
-      text: question.text,
+      text,
+      interviewerPrompt: cleanShortText(question.interviewerPrompt, buildInterviewerPrompt(text, question.type)),
       type: question.type || 'behavioral',
       difficulty: question.difficulty || 'medium',
       followUpQuestions: question.followUpQuestions || [],

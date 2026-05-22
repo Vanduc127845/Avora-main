@@ -56,16 +56,6 @@ const platforms = [
   { name: 'Interview', value: '45%', amount: 'Needs work', icon: Mic, color: 'text-amber-600', bg: 'bg-amber-50' },
 ];
 
-const weeklyBars = [
-  { label: 'Mon', value: 42, color: 'bg-stone-200' },
-  { label: 'Tue', value: 64, color: 'bg-primary-500' },
-  { label: 'Wed', value: 38, color: 'bg-stone-200' },
-  { label: 'Thu', value: 82, color: 'bg-stone-950' },
-  { label: 'Fri', value: 58, color: 'bg-sky-500' },
-  { label: 'Sat', value: 35, color: 'bg-stone-200' },
-  { label: 'Sun', value: 72, color: 'bg-emerald-500' },
-];
-
 const nextActions = [
   {
     title: 'Complete profile details',
@@ -161,10 +151,10 @@ function ProgressTrack({ items = progressTimeline }: { items?: typeof progressTi
   );
 }
 
-function WeeklyChart() {
+function WeeklyChart({ bars }: { bars: { label: string; value: number; color: string }[] }) {
   return (
     <div className="flex h-[180px] items-end gap-3 rounded-[24px] bg-stone-50 px-4 pb-4 pt-6">
-      {weeklyBars.map((bar) => (
+      {bars.map((bar) => (
         <div key={bar.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
           <div className="flex h-28 w-full max-w-9 items-end rounded-full bg-white p-1 shadow-inner">
             <div className={`w-full rounded-full ${bar.color}`} style={{ height: `${bar.value}%` }} />
@@ -271,6 +261,11 @@ export default function DashboardPage() {
     { label: 'Jobs', value: Math.min(100, snapshot.savedJobs.length * 20), amount: `${snapshot.savedJobs.length} saved`, color: 'bg-sky-500' },
     { label: 'Interview', value: Math.min(100, Math.max(completedInterviews * 25, interviewAverage)), amount: `${snapshot.interviews.length} sessions`, color: 'bg-amber-500' },
   ];
+  const readinessBars = liveProgressTimeline.map((item) => ({
+    label: item.label,
+    value: item.value,
+    color: item.color,
+  }));
 
   const livePlatforms = [
     { name: 'Assessment', value: completedAssessments ? '100%' : '0%', amount: completedAssessments ? 'Complete' : 'Needs input', icon: Sparkles, color: 'text-primary-600', bg: 'bg-primary-50' },
@@ -345,7 +340,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <p className="mt-2 text-sm font-medium text-stone-500">
-                  Career traction vs previous plan, Jan 1 - May 13, 2026
+                  Updated from your current profile, jobs, roadmaps, and interview practice.
                 </p>
               </div>
 
@@ -511,16 +506,16 @@ export default function DashboardPage() {
           <div className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Weekly focus</p>
-                <h2 className="mt-1 text-xl font-bold text-stone-950">Learning momentum</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Live mix</p>
+                <h2 className="mt-1 text-xl font-bold text-stone-950">Readiness momentum</h2>
               </div>
               <div className="inline-flex rounded-full bg-stone-100 p-1">
-                <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-bold text-white">Tasks</span>
-                <span className="px-3 py-1 text-xs font-bold text-stone-500">Wins</span>
+                <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-bold text-white">Now</span>
+                <span className="px-3 py-1 text-xs font-bold text-stone-500">Goals</span>
               </div>
             </div>
 
-            <WeeklyChart />
+            <WeeklyChart bars={readinessBars} />
           </div>
         </div>
 

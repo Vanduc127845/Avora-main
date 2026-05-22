@@ -10,6 +10,7 @@ export interface InterviewConfig {
 export interface InterviewQuestion {
   id: string;
   text: string;
+  interviewerPrompt?: string;
   type: string;
   difficulty: string;
   followUpQuestions: string[];
@@ -22,6 +23,7 @@ export interface InterviewResponse {
   questionId: string;
   response: string;
   audioUrl?: string;
+  interviewerReply?: string;
   feedback: {
     score: number;
     strengths: string[];

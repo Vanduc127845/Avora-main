@@ -1,7 +1,7 @@
 const apiUrl = (process.env.API_URL || 'http://localhost:4000').replace(/\/$/, '');
 const webUrl = (process.env.WEB_URL || 'http://localhost:3000').replace(/\/$/, '');
 
-const email = `smoke-${Date.now()}@avora.local`;
+const email = `smoke-${Date.now()}@avora.dev`;
 const password = 'SmokeTest123!';
 const newPassword = 'SmokeTest456!';
 

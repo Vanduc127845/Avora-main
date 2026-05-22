@@ -1,13 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { createClient } from '@supabase/supabase-js';
 import { AppError } from './error.middleware.js';
+import { getOptionalSupabaseAdmin } from '../utils/supabase.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
-
-let supabaseAdmin: ReturnType<typeof createClient> | null = null;
 
 export interface AuthUser {
   userId: string;
@@ -22,20 +18,8 @@ declare global {
   }
 }
 
-const getSupabaseAdmin = () => {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    return null;
-  }
-
-  if (!supabaseAdmin) {
-    supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-  }
-
-  return supabaseAdmin;
-};
-
 const verifySupabaseToken = async (token: string): Promise<AuthUser | null> => {
-  const supabase = getSupabaseAdmin();
+  const supabase = getOptionalSupabaseAdmin();
   if (!supabase) return null;
 
   const { data, error } = await supabase.auth.getUser(token);

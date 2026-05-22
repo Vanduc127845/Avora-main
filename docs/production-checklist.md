@@ -52,8 +52,10 @@ PORT=4000
 JWT_SECRET=<long-random-secret>
 CORS_ORIGIN=https://your-web-domain.com
 FRONTEND_URL=https://your-web-domain.com
+AUTH_PASSWORD_RESET_DRY_RUN=false
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=<service-role-key>
+SUPABASE_ANON_KEY=<anon-key>
 API_RATE_LIMIT_MAX=600
 AI_RATE_LIMIT_MAX=30
 AI_ACTION_RATE_LIMIT_MAX=20
@@ -63,6 +65,8 @@ AI_PROVIDER_MAX_RETRIES=1
 AI_PROVIDER_RETRY_BASE_MS=700
 AI_PROVIDER_RETRY_MAX_MS=2500
 DEBUG_API_REQUESTS=false
+RESEND_API_KEY=<resend-key>
+PARTNER_EMAIL_TO=partnerships@your-domain.com
 ```
 
 Web:
@@ -154,6 +158,7 @@ Before opening to users, confirm:
 - `/ready` returns `status: "ok"` with Supabase, AI, and Redis checks.
 - `/api/ai/status` reports `configured: true`.
 - Register, login, forgot password, and reset password work from the deployed web domain.
+- Partner inquiry form sends an email to `PARTNER_EMAIL_TO`. If email delivery is intentionally disabled for a demo, set `PARTNER_INQUIRY_DRY_RUN=true` and confirm the API returns `delivery: "dry-run"`.
 - OAuth redirect URLs in Supabase include both `https://your-api-domain.com/api/auth/oauth/google/callback`, `https://your-api-domain.com/api/auth/oauth/microsoft/callback`, and the final frontend callback `https://your-web-domain.com/auth/callback`.
 - `CORS_ORIGIN` contains the deployed web domain exactly.
 - `pnpm test:e2e:career` passes against the deployed API/web URLs using `API_URL` and `WEB_URL`.

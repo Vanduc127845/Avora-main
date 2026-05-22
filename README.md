@@ -12,13 +12,9 @@ Avora is a web platform that helps people with disabilities explore career paths
 
 ## Current Status
 
-This repository is currently around:
+This repository is a **submission-ready local MVP** for the May 26, 2026 deadline. The core web product runs end to end with local demo persistence, auth, career assessment, job analysis, roadmaps, mock interviews, confidence coaching, partner inquiry handling, AI provider integration, and demo fallback when real AI keys are not configured.
 
-- **80% complete** for a local demo / MVP.
-- **65-70% complete** for a public MVP.
-- **50-55% complete** compared with a polished commercial product.
-
-The project started from an estimated **50% complete** state and has been improved into a working local MVP with authentication, persistent demo users, AI chat fallback, production configuration, and clearer GitHub documentation.
+For public production, the remaining work is environment and operations setup: real Supabase keys, real OpenAI or Azure OpenAI keys, deployed domains/CORS, email delivery keys, Redis-backed rate limiting, and final accessibility QA on the deployed URL.
 
 ## What Has Been Improved
 
@@ -30,6 +26,8 @@ The project started from an estimated **50% complete** state and has been improv
 - Added `/api/ai/status` to check whether real AI provider keys are configured.
 - Added OpenAI and Azure OpenAI environment support.
 - Added demo fallback mode when no real AI key is configured.
+- Added AI interviewer turn replies during mock interview practice.
+- Added partner inquiry backend handling with Resend email delivery and safe demo dry-run.
 - Improved Vietnamese fallback responses for Avora AI.
 - Improved auth error messages, including clearer API network errors.
 - Improved landing page hero UI and fixed broken AI image/avatar icons.
@@ -41,9 +39,7 @@ The project started from an estimated **50% complete** state and has been improv
 
 - The AI is not fully intelligent until `OPENAI_API_KEY` or Azure OpenAI keys are configured.
 - Supabase production auth/database is prepared but still needs real project keys and schema verification.
-- Some pages still contain mock/demo content, especially Dashboard, Confidence, Partners, and some landing sections.
-- Some lower sections of the UI still need Vietnamese/English consistency cleanup.
-- Browser-based UI tests should be expanded with Playwright or another real browser e2e tool.
+- Browser-based UI tests should be expanded beyond the current smoke coverage before a large public launch.
 - Public deployment still needs real domains, CORS values, Supabase redirect URLs, and production environment variables.
 - Mobile app and some Azure infrastructure targets are not fully production-ready.
 
@@ -124,10 +120,12 @@ JWT_SECRET=change-this-secret
 CORS_ORIGIN=http://localhost:3000,http://127.0.0.1:3000
 FRONTEND_URL=http://localhost:3000
 DEMO_DATA_FILE=./data/demo-db.json
+AUTH_PASSWORD_RESET_DRY_RUN=true
 
 VITE_API_URL=http://localhost:4000
 VITE_APP_NAME=Avora
 AI_ENABLE_DEMO_FALLBACK=true
+PARTNER_INQUIRY_DRY_RUN=true
 ```
 
 To use real AI, choose one provider.
@@ -154,8 +152,16 @@ For production, configure Supabase:
 ```env
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=your-service-role-key
+SUPABASE_ANON_KEY=your-anon-key
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+To deliver partner inquiries by email, configure:
+
+```env
+RESEND_API_KEY=re_your_key
+PARTNER_EMAIL_TO=partnerships@example.com
 ```
 
 ## Running Locally
@@ -283,10 +289,10 @@ Priority order:
 
 1. Configure Supabase production auth/database.
 2. Configure real OpenAI or Azure OpenAI.
-3. Remove or replace mock content in Dashboard, Confidence, Partners, and lower landing sections.
-4. Add full browser e2e tests.
-5. Deploy web and API.
-6. Test on mobile screen sizes and with accessibility settings.
+3. Deploy web and API with final domains and CORS values.
+4. Add full browser e2e tests for all primary user journeys.
+5. Test on mobile screen sizes and with screen reader / keyboard-only workflows.
+6. Decide whether the mobile app and Azure infrastructure should ship in the same release or remain roadmap items.
 
 ## License
 
