@@ -12,9 +12,10 @@ async function assertOkPage(path) {
 }
 
 async function json(path, options = {}) {
+  const { headers: extraHeaders, ...fetchOptions } = options;
   const response = await fetch(`${apiUrl}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    ...options,
+    ...fetchOptions,
+    headers: { 'Content-Type': 'application/json', ...(extraHeaders || {}) },
   });
   const text = await response.text();
   const payload = text ? JSON.parse(text) : {};

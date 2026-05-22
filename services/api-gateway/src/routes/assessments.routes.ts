@@ -63,8 +63,12 @@ const addAssessmentMessage = async (req: Request, res: Response, next: NextFunct
     const { message, extractedData } = req.body;
     const userId = getUserId(req);
 
+    if (typeof message !== 'string' || !message.trim()) {
+      throw new AppError('Message is required', 400);
+    }
+
     const result = await assessmentService.addMessage(id, userId, {
-      message,
+      message: message.trim(),
       extractedData,
     });
 

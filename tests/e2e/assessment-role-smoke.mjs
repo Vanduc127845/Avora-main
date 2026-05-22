@@ -1,9 +1,8 @@
 const apiUrl = (process.env.API_URL || 'http://localhost:4000').replace(/\/$/, '');
 const webUrl = (process.env.WEB_URL || 'http://localhost:3000').replace(/\/$/, '');
 
-const email = `smoke-${Date.now()}@avora.dev`;
-const password = 'SmokeTest123!';
-const newPassword = 'SmokeTest456!';
+const email = `assessment-role-${Date.now()}@avora.dev`;
+const password = 'AssessmentRole123!';
 
 async function assertOkPage(path) {
   const response = await fetch(`${webUrl}${path}`);
@@ -27,53 +26,46 @@ async function json(path, options = {}) {
 }
 
 async function main() {
-  await assertOkPage('/login');
-  await assertOkPage('/register');
+  await assertOkPage('/assessment');
   await json('/health');
 
   const registration = await json('/api/auth/register', {
     method: 'POST',
     body: JSON.stringify({
-      name: 'Smoke Test User',
+      name: 'Assessment Role User',
       email,
       password,
     }),
   });
-
   if (!registration.token) throw new Error('Register did not return a token');
 
-  await json('/api/users/profile', {
-    headers: { Authorization: `Bearer ${registration.token}` },
-  });
-
-  const login = await json('/api/auth/login', {
+  const auth = { Authorization: `Bearer ${registration.token}` };
+  const created = await json('/api/assessments', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    headers: auth,
   });
-  if (!login.token) throw new Error('Login did not return a token');
+  const assessmentId = created.assessment?.id;
+  if (!assessmentId) throw new Error('Assessment creation did not return an id');
 
-  const forgot = await json('/api/auth/forgot-password', {
+  const result = await json(`/api/assessments/${assessmentId}/message`, {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    headers: auth,
+    body: JSON.stringify({ message: 'phân tích job Back - end developer' }),
   });
 
-  if (forgot.resetToken) {
-    await json('/api/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({
-        token: forgot.resetToken,
-        password: newPassword,
-      }),
-    });
-
-    const relogin = await json('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password: newPassword }),
-    });
-    if (!relogin.token) throw new Error('Login after password reset did not return a token');
+  const selectedJob = result.orchestration?.selectedJob || '';
+  const responseText = result.response || '';
+  if (!/backend developer/i.test(selectedJob)) {
+    throw new Error(`Expected Backend Developer selection, got "${selectedJob}"`);
+  }
+  if (/junior frontend|inclusive web studio/i.test(responseText)) {
+    throw new Error(`Assessment reused the wrong frontend demo job: ${responseText.slice(0, 240)}`);
+  }
+  if (!/JD|tin tuyển dụng|paste/i.test(responseText)) {
+    throw new Error(`Expected the response to ask for a real JD, got: ${responseText.slice(0, 240)}`);
   }
 
-  console.log(`Auth smoke passed for ${email}`);
+  console.log(`Assessment role smoke passed for ${email}`);
 }
 
 main().catch((error) => {

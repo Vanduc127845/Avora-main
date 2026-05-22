@@ -117,8 +117,8 @@ const isVietnameseMessage = (value: string) =>
   /[ăâđêôơưáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ]/i.test(value) ||
   /\b(toi|ban|minh|viec|nghe|hoc|phong van|khuyet tat|ho tro|dang|can)\b/i.test(value);
 
-const normalizeVietnamese = (value: string) =>
-  value
+const normalizeVietnamese = (value: string | null | undefined) =>
+  String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/đ/g, 'd')
@@ -190,6 +190,16 @@ const skillKey = (value: string) =>
     .replace(/[^a-z0-9+#. ]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+
+const roleKey = (value: string) =>
+  skillKey(value)
+    .replace(/\bfront\s+end\b/g, 'frontend')
+    .replace(/\bback\s+end\b/g, 'backend');
+
+const keyTokens = (value: string) =>
+  roleKey(value)
+    .split(' ')
+    .filter(Boolean);
 
 const collectSkillNames = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
@@ -331,6 +341,9 @@ const extractPastedJD = (message: string, context?: ChatContext): string | null 
 const detectRole = (text: string): string | undefined => {
   const normalized = normalizeVietnamese(text);
   const raw = text.toLowerCase();
+  if (/\b(back\s*[- ]?\s*end|backend|node(?:\.js)?|express|api developer)\b/i.test(raw)) {
+    return 'Backend Developer';
+  }
   if (/\b(frontend|front-end|fe|react|ui developer|web developer)\b/i.test(raw) || normalized.includes('lap trinh web')) {
     return 'Frontend Developer';
   }
@@ -351,19 +364,18 @@ const detectRole = (text: string): string | undefined => {
 };
 
 const scoreCandidateJob = (job: CandidateJob, text: string, role?: string) => {
-  const haystack = skillKey(
+  const haystackTokens = new Set(keyTokens(
     [
       job.basic?.title,
       job.basic?.company,
       job.details?.description,
       ...(job.details?.requirements?.skills || []),
     ].filter(Boolean).join(' ')
-  );
-  const needles = skillKey([text, role || ''].join(' '))
-    .split(' ')
+  ));
+  const needles = keyTokens([text, role || ''].join(' '))
     .filter((part) => part.length > 2);
 
-  return needles.reduce((score, part) => score + (haystack.includes(part) ? 1 : 0), 0);
+  return needles.reduce((score, part) => score + (haystackTokens.has(part) ? 1 : 0), 0);
 };
 
 const GENERIC_ROLE_TOKENS = new Set([
@@ -382,16 +394,15 @@ const GENERIC_ROLE_TOKENS = new Set([
 ]);
 
 const roleSpecificTokens = (role: string) =>
-  skillKey(role)
-    .split(' ')
+  keyTokens(role)
     .filter((token) => token.length > 1 && !GENERIC_ROLE_TOKENS.has(token));
 
 const roleMatchesJobTitle = (job: CandidateJob, role: string) => {
   const tokens = roleSpecificTokens(role);
   if (!tokens.length) return true;
 
-  const title = skillKey(job.basic.title);
-  return tokens.some((token) => title.includes(token));
+  const titleTokens = new Set(keyTokens(job.basic.title));
+  return tokens.some((token) => titleTokens.has(token));
 };
 
 const selectCandidateJob = (jobs: CandidateJob[], text: string, role?: string): CandidateJob | null => {
@@ -403,7 +414,7 @@ const selectCandidateJob = (jobs: CandidateJob[], text: string, role?: string): 
     .map((job) => ({ job, score: scoreCandidateJob(job, text, role) }))
     .sort((left, right) => right.score - left.score);
   if (scored[0]?.score > 0) return scored[0].job;
-  return role && jobs.length === 1 ? jobs[0] : null;
+  return null;
 };
 
 const KNOWN_SKILLS = [
