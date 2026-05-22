@@ -61,8 +61,11 @@ async function main() {
   if (/junior frontend|inclusive web studio/i.test(responseText)) {
     throw new Error(`Assessment reused the wrong frontend demo job: ${responseText.slice(0, 240)}`);
   }
-  if (!/JD|tin tuyển dụng|paste/i.test(responseText)) {
-    throw new Error(`Expected the response to ask for a real JD, got: ${responseText.slice(0, 240)}`);
+  if (!/node|express|rest api|sql/i.test(responseText)) {
+    throw new Error(`Expected backend analysis with backend skills, got: ${responseText.slice(0, 240)}`);
+  }
+  if (/paste JD|dán JD|ứng tuyển vị trí cụ thể/i.test(responseText)) {
+    throw new Error(`Assessment still asked for a JD instead of analyzing the role: ${responseText.slice(0, 240)}`);
   }
 
   console.log(`Assessment role smoke passed for ${email}`);

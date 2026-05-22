@@ -440,6 +440,47 @@ const KNOWN_SKILLS = [
   'Customer empathy',
 ];
 
+const ROLE_BASELINES: Record<string, { title: string; source: string; skills: string[]; description: string }> = {
+  'backend developer': {
+    title: 'Backend Developer',
+    source: 'Mẫu yêu cầu phổ biến cho Backend Developer',
+    skills: ['Node.js', 'Express', 'REST API', 'SQL', 'Authentication', 'Error handling', 'API testing', 'Git'],
+    description: [
+      'Job description: Build and maintain server-side APIs, data flows, authentication, and integration logic.',
+      'Responsibilities: Design REST endpoints, validate requests, handle errors, work with SQL data, and document APIs.',
+      'Requirements: Node.js, Express, REST API, SQL, Authentication, Error handling, API testing, Git.',
+    ].join('\n'),
+  },
+  'frontend developer': {
+    title: 'Frontend Developer',
+    source: 'Mẫu yêu cầu phổ biến cho Frontend Developer',
+    skills: ['React', 'TypeScript', 'HTML', 'CSS', 'API integration', 'Form validation', 'Accessibility basics', 'Git'],
+    description: [
+      'Job description: Build accessible web interfaces and connect them to API data.',
+      'Responsibilities: Create React components, manage form states, call APIs, and test keyboard-friendly UI.',
+      'Requirements: React, TypeScript, HTML, CSS, API integration, Form validation, Accessibility basics, Git.',
+    ].join('\n'),
+  },
+  'data analyst assistant': {
+    title: 'Data Analyst Assistant',
+    source: 'Mẫu yêu cầu phổ biến cho Data Analyst Assistant',
+    skills: ['Excel or Google Sheets', 'SQL', 'Data cleaning', 'Dashboard basics', 'Clear writing', 'Problem solving'],
+    description: [
+      'Job description: Clean data, build simple reports, and summarize insights for business or nonprofit teams.',
+      'Responsibilities: Prepare spreadsheets, write basic SQL, check data quality, and explain trends clearly.',
+      'Requirements: Excel or Google Sheets, SQL, Data cleaning, Dashboard basics, Clear writing, Problem solving.',
+    ].join('\n'),
+  },
+};
+
+const roleBaselineFor = (role?: string) => {
+  const key = roleKey(role || '');
+  if (key.includes('backend')) return ROLE_BASELINES['backend developer'];
+  if (key.includes('frontend') || key.includes('react')) return ROLE_BASELINES['frontend developer'];
+  if (key.includes('data analyst')) return ROLE_BASELINES['data analyst assistant'];
+  return null;
+};
+
 const extractSkillsFromJDText = (jdText: string): string[] => {
   const explicitLines = jdText
     .split(/\r?\n/)
@@ -481,6 +522,11 @@ const resourceForSkill = (skill: string) => {
     return 'web.dev Learn Accessibility: https://web.dev/learn/accessibility';
   }
   if (key.includes('api') || key.includes('rest')) return 'MDN Fetch API: https://developer.mozilla.org/docs/Web/API/Fetch_API';
+  if (key.includes('node')) return 'Node.js Learn: https://nodejs.org/en/learn';
+  if (key.includes('express')) return 'Express Guide: https://expressjs.com/en/guide/routing.html';
+  if (key.includes('authentication')) return 'OWASP Authentication Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html';
+  if (key.includes('error')) return 'Express error handling guide: https://expressjs.com/en/guide/error-handling.html';
+  if (key.includes('testing')) return 'Postman API testing basics or Supertest practice project';
   if (key.includes('form')) return 'React form validation practice project';
   if (key.includes('sql')) return 'SQLBolt: https://sqlbolt.com';
   if (key.includes('excel') || key.includes('sheets')) return 'Google Sheets training: https://support.google.com/a/users/answer/9282959';
@@ -492,6 +538,9 @@ const outputForSkill = (skill: string, role: string) => {
   if (key.includes('react')) return `Một component ${role} dùng props, state và xử lý lỗi rõ ràng.`;
   if (key.includes('typescript')) return 'Chuyển một màn hình JavaScript sang TypeScript có type cho props và API response.';
   if (key.includes('api') || key.includes('rest')) return 'Một trang gọi API thật, xử lý loading/error/empty state.';
+  if (key.includes('node') || key.includes('express')) return `Một REST API nhỏ cho ${role} có routing, validation và error response rõ ràng.`;
+  if (key.includes('authentication')) return 'Một luồng đăng nhập demo có hash mật khẩu, token và middleware bảo vệ route.';
+  if (key.includes('testing')) return 'Bộ test API cho happy path, lỗi validation và lỗi không có quyền.';
   if (key.includes('accessibility') || key.includes('wcag') || key.includes('aria')) {
     return 'Checklist kiểm thử keyboard, label, focus state và contrast cho một màn hình.';
   }
@@ -832,15 +881,22 @@ export class AIService {
       messageRole ? message : conversationText,
       role
     );
-    const jobTitle = candidateJob?.basic.title || role || 'vị trí mục tiêu';
-    const jdText = candidateJob ? formatJobDescription(candidateJob) : pastedJD;
+    const roleBaseline = !candidateJob && !pastedJD ? roleBaselineFor(role) : null;
+    const jobTitle = candidateJob?.basic.title || roleBaseline?.title || role || 'vị trí mục tiêu';
+    const jdText = candidateJob ? formatJobDescription(candidateJob) : pastedJD || roleBaseline?.description || null;
     const jdSource = candidateJob
       ? `${candidateJob.basic.company} - ${candidateJob.basic.title}${candidateJob.url ? ` (${candidateJob.url})` : ''}`
       : pastedJD
         ? 'JD người dùng cung cấp trong cuộc trò chuyện'
+        : roleBaseline
+          ? roleBaseline.source
         : '';
     const userSkills = contextProfileSkills(context);
-    const requiredSkills = uniqueStrings(candidateJob?.details.requirements.skills || (jdText ? extractSkillsFromJDText(jdText) : []));
+    const requiredSkills = uniqueStrings(
+      candidateJob?.details.requirements.skills ||
+      roleBaseline?.skills ||
+      (jdText ? extractSkillsFromJDText(jdText) : [])
+    );
 
     if (!jdText || requiredSkills.length === 0) {
       const profileSummary = userSkills.length
