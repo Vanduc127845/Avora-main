@@ -158,7 +158,7 @@ For local demo mode, you can run without Supabase and without AI provider keys. 
 
 ## Configuration
 
-Create a `.env` file from `.env.example`.
+Create one root `.env` file from `.env.example`. The local pnpm commands for the web app, API gateway, and AI service read this shared file. Keep real credentials only in `.env`; Git ignores that file.
 
 ### Local demo essentials
 
@@ -206,6 +206,10 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 Run `infra/supabase/free-mvp-schema.sql` in the Supabase SQL editor before connecting production traffic.
+
+### Docker Compose
+
+Docker Compose uses service-specific production files. Before running Docker Compose, create `services/api-gateway/.env.production` and `services/ai-service/.env.production` from `.env.example`, then replace the placeholders. Git ignores these production credential files.
 
 ## Development
 

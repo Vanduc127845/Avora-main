@@ -4,10 +4,11 @@ Use this checklist before publishing Avora.
 
 ## Local verification
 
-1. Install dependencies:
+1. Install dependencies and create the shared root environment file:
 
    ```powershell
    pnpm install --frozen-lockfile
+   Copy-Item .env.example .env
    ```
 
 2. Start the API and web app in two terminals:
