@@ -5,9 +5,11 @@ An AI-powered career platform that helps people with disabilities move from self
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Node](https://img.shields.io/badge/node-20.x-339933?logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/typescript-5.x-3178C6?logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/react-18-61DAFB?logo=react&logoColor=111)
+![React](https://img.shields.io/badge/react-18-61BAFB?logo=react&logoColor=111)
 ![Vite](https://img.shields.io/badge/vite-8-646CFF?logo=vite&logoColor=white)
 ![Status](https://img.shields.io/badge/status-submission--ready%20MVP-0ea5e9)
+
+🚀 **[Live Demo](YOUR_LINK_HERE)** | 🎥 **[Video Pitch](YOUR_LINK_HERE)**
 
 ## Vision
 
@@ -147,12 +149,37 @@ $env:NODE_OPTIONS='--use-system-ca'
 
 ### Installation
 
-```powershell
+1. Clone the repository:
+
+```bash
 git clone https://github.com/Vanduc127845/Avora-main.git
+```
+
+2. Enter the project directory:
+
+```bash
 cd Avora-main
+```
+
+3. Install dependencies:
+
+```bash
 pnpm install
+```
+
+4. Create the shared root environment file:
+
+```powershell
 Copy-Item .env.example .env
 ```
+
+> 💡 **JUDGE'S NOTE: ZERO-CONFIG LOCAL MODE**
+>
+> You do NOT need production Supabase or AI provider keys to evaluate this project.
+>
+> Keep `AI_ENABLE_DEMO_FALLBACK=true` in the root `.env` file created from `.env.example`.
+>
+> Avora will use local demo auth, mock data persistence, and fallback AI for the core evaluation flows: career assessment, job analysis, roadmaps, mock interviews, and confidence coaching.
 
 For local demo mode, you can run without Supabase and without AI provider keys. Avora will use local demo auth and fallback AI.
 
@@ -176,6 +203,9 @@ VITE_APP_NAME=Avora
 AI_ENABLE_DEMO_FALLBACK=true
 PARTNER_INQUIRY_DRY_RUN=true
 ```
+
+<details>
+<summary>⚙️ Click to expand Production Configs (Not required for Hackathon Evaluation)</summary>
 
 ### OpenAI provider
 
@@ -210,6 +240,8 @@ Run `infra/supabase/free-mvp-schema.sql` in the Supabase SQL editor before conne
 ### Docker Compose
 
 Docker Compose uses service-specific production files. Before running Docker Compose, create `services/api-gateway/.env.production` and `services/ai-service/.env.production` from `.env.example`, then replace the placeholders. Git ignores these production credential files.
+
+</details>
 
 ## Development
 
@@ -305,6 +337,9 @@ Avora-main/
 
 ## Modules Overview
 
+<details>
+<summary>📦 View Detailed Module Overview</summary>
+
 ### 1. User Profile & Accessibility
 
 - Multi-step profile onboarding
@@ -363,7 +398,12 @@ Avora-main/
 - Resend email delivery
 - Safe dry-run mode for demos
 
+</details>
+
 ## API Documentation
+
+<details>
+<summary>🔌 View Complete API Documentation</summary>
 
 ### Health and readiness
 
@@ -449,6 +489,8 @@ DELETE /api/agent-memory
 ```text
 POST /api/partner-inquiry
 ```
+
+</details>
 
 ## Production Checklist
 
