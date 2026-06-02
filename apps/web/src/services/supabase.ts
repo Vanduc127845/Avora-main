@@ -4,7 +4,10 @@ import { API_BASE_URL } from './api-base-url';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-export const supabase = supabaseUrl && supabaseAnonKey
+const hasRealEnvValue = (value: string) =>
+  Boolean(value.trim() && !/your-|change-this|placeholder/i.test(value));
+
+export const supabase = hasRealEnvValue(supabaseUrl) && hasRealEnvValue(supabaseAnonKey)
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
