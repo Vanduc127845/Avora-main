@@ -52,6 +52,7 @@ PORT=4000
 JWT_SECRET=<long-random-secret>
 CORS_ORIGIN=https://your-web-domain.com
 FRONTEND_URL=https://your-web-domain.com
+API_PUBLIC_URL=https://your-api-domain.com
 AUTH_PASSWORD_RESET_DRY_RUN=false
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=<service-role-key>
@@ -76,6 +77,8 @@ VITE_API_URL=https://your-api-domain.com
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-key>
 VITE_APP_NAME=Avora
+VITE_DASHBOARD_DATA_MODE=hybrid
+VITE_ENABLE_OAUTH=true
 ```
 
 AI provider, choose one:
@@ -101,7 +104,7 @@ Set this after provider keys are confirmed so production does not silently use d
 AI_ENABLE_DEMO_FALLBACK=false
 ```
 
-Before connecting production traffic, run `infra/supabase/free-mvp-schema.sql` in Supabase SQL editor. It creates the production tables for profiles, saved jobs, assessments, roadmap/interview data, and per-agent memory. The schema enables row-level security for user-owned tables; the API uses the service role key only on the backend.
+Before connecting production traffic, run `infra/supabase/free-mvp-schema.sql` in Supabase SQL editor. It creates the production tables for profiles, settings, saved jobs, assessments, roadmap/interview data, confidence check-ins, partner inquiries, and per-agent memory. The schema enables row-level security for user-owned tables; the API uses the service role key only on the backend.
 
 Check AI status after deploy:
 
@@ -158,8 +161,8 @@ Before opening to users, confirm:
 - `/ready` returns `status: "ok"` with Supabase, AI, and Redis checks.
 - `/api/ai/status` reports `configured: true`.
 - Register, login, forgot password, and reset password work from the deployed web domain.
-- Partner inquiry form sends an email to `PARTNER_EMAIL_TO`. If email delivery is intentionally disabled for a demo, set `PARTNER_INQUIRY_DRY_RUN=true` and confirm the API returns `delivery: "dry-run"`.
-- OAuth redirect URLs in Supabase include both `https://your-api-domain.com/api/auth/oauth/google/callback`, `https://your-api-domain.com/api/auth/oauth/microsoft/callback`, and the final frontend callback `https://your-web-domain.com/auth/callback`.
+- Partner inquiry form sends an email to `PARTNER_EMAIL_TO`. If `RESEND_API_KEY` is missing or delivery fails, confirm the API accepts the inquiry with `delivery: "skipped"` or `delivery: "deferred"` and the UI shows `Sẽ liên hệ trong 24h`.
+- OAuth redirect URLs in Supabase include `https://your-web-domain.com/auth/callback`. If using the API-started OAuth endpoints, also include `https://your-api-domain.com/api/auth/oauth/google/callback` and `https://your-api-domain.com/api/auth/oauth/microsoft/callback`.
 - `CORS_ORIGIN` contains the deployed web domain exactly.
 - `pnpm test:e2e:career` passes against the deployed API/web URLs using `API_URL` and `WEB_URL`.
 - Browser accessibility checks pass for keyboard navigation, focus states, labels, reduced motion, and contrast. Automated checks are a baseline; verify at least one flow with NVDA, Narrator, or VoiceOver before launch.

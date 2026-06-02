@@ -94,12 +94,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       >
         <div className="flex h-full flex-col">
           <div className="flex h-16 items-center justify-between border-b border-stone-200 px-5">
-            <Link to="/dashboard" onClick={onClose} className="flex items-center gap-3">
+            <Link to="/dashboard" onClick={onClose} className="focus-ring flex items-center gap-3 rounded-xl">
               <span className="text-2xl font-bold tracking-tight text-stone-950">Avora</span>
             </Link>
             <button
               onClick={onClose}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-stone-500 hover:bg-stone-100 lg:hidden"
+              className="interactive-button inline-flex h-10 w-10 items-center justify-center rounded-xl text-stone-500 hover:bg-stone-100 hover:text-stone-950 lg:hidden"
               aria-label="Đóng điều hướng"
             >
               <X className="h-5 w-5" />
@@ -117,11 +117,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   to={item.path}
                   onClick={onClose}
                   className={`
-                    group flex items-center gap-3 rounded-2xl border-l-4 px-3 py-3 transition-all
+                    sidebar-item group flex items-center gap-3 rounded-2xl border-l-4 px-3 py-3
                     ${
                       isActive
-                        ? `${item.accent.softBg} ${item.accent.text} ${item.accent.border} shadow-sm ring-1 ${item.accent.ring}`
-                        : 'text-stone-600 hover:bg-stone-100 hover:text-stone-950'
+                        ? `${item.accent.softBg} ${item.accent.text} ${item.accent.border} shadow-md ring-1 ${item.accent.ring}`
+                        : 'text-stone-600 hover:border-l-stone-200 hover:bg-stone-100 hover:text-stone-950 hover:shadow-sm'
                     }
                     ${isActive ? '' : 'border-l-transparent'}
                   `}
@@ -129,8 +129,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 >
                   <span
                     className={`
-                      flex h-10 w-10 items-center justify-center rounded-xl transition-colors
-                      ${isActive ? `${item.accent.iconBg} text-white` : 'bg-stone-100 text-stone-500 group-hover:bg-white'}
+                      interactive-icon flex h-10 w-10 items-center justify-center rounded-xl
+                      ${isActive ? `${item.accent.iconBg} text-white shadow-sm` : 'bg-stone-100 text-stone-500 group-hover:scale-105 group-hover:bg-white group-hover:text-primary-600 group-hover:shadow-sm'}
                     `}
                   >
                     <Icon className="h-5 w-5" />
@@ -175,13 +175,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     key={item.path}
                     to={item.path}
                     onClick={onClose}
-                    className={`flex items-center gap-3 rounded-xl border-l-4 px-3 py-2.5 text-sm font-semibold transition-colors ${
+                    className={`sidebar-item group flex items-center gap-3 rounded-xl border-l-4 px-3 py-2.5 text-sm font-semibold ${
                       isActive
-                        ? `${item.accent.softBg} ${item.accent.text} ${item.accent.border}`
-                        : 'border-l-transparent text-stone-600 hover:bg-stone-100 hover:text-stone-950'
+                        ? `${item.accent.softBg} ${item.accent.text} ${item.accent.border} shadow-sm`
+                        : 'border-l-transparent text-stone-600 hover:border-l-stone-200 hover:bg-stone-100 hover:text-stone-950 hover:shadow-sm'
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="interactive-icon h-4 w-4 group-hover:scale-105 group-hover:text-primary-600" />
                     <span className="flex flex-1 items-center justify-between gap-2">
                       {item.label}
                       <span className="rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] font-bold text-stone-500">

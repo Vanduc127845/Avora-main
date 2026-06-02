@@ -2,7 +2,17 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 import { AppError } from '../middleware/error.middleware.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
-import { demoProfiles, demoUsers } from '../data/demo-store.js';
+import {
+  demoAgentMemories,
+  demoAssessments,
+  demoConfidenceEntries,
+  demoInterviews,
+  demoProfiles,
+  demoRoadmaps,
+  demoSavedJobs,
+  demoSettings,
+  demoUsers,
+} from '../data/demo-store.js';
 import { saveDemoData } from '../data/demo-persistence.js';
 import { getOptionalSupabaseAdmin } from '../utils/supabase.js';
 import type { UserProfile } from '../types/shared.js';
@@ -374,6 +384,23 @@ router.delete('/account',
       if (!supabase) {
         demoProfiles.delete(userId!);
         demoUsers.delete(userId!);
+        demoSavedJobs.delete(userId!);
+        demoSettings.delete(userId!);
+        for (const [key, memory] of demoAgentMemories) {
+          if (memory.userId === userId) demoAgentMemories.delete(key);
+        }
+        for (const [key, entry] of demoConfidenceEntries) {
+          if (entry.userId === userId) demoConfidenceEntries.delete(key);
+        }
+        for (const [key, assessment] of demoAssessments) {
+          if (assessment.userId === userId) demoAssessments.delete(key);
+        }
+        for (const [key, roadmap] of demoRoadmaps) {
+          if (roadmap.userId === userId) demoRoadmaps.delete(key);
+        }
+        for (const [key, interview] of demoInterviews) {
+          if (interview.userId === userId) demoInterviews.delete(key);
+        }
         await saveDemoData();
         res.json({ message: 'Account deleted successfully' });
         return;

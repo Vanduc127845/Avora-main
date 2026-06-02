@@ -81,6 +81,8 @@ const isPasswordResetDryRun = () =>
   process.env.AUTH_PASSWORD_RESET_DRY_RUN === 'true' ||
   (process.env.NODE_ENV !== 'production' && process.env.AUTH_PASSWORD_RESET_DRY_RUN !== 'false');
 
+const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '');
+
 router.post('/register',
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
@@ -232,7 +234,7 @@ router.post('/forgot-password',
           return;
         }
 
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const frontendUrl = trimTrailingSlash(process.env.FRONTEND_URL || 'http://localhost:3000');
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${frontendUrl}/login?mode=reset`,
         });
@@ -318,7 +320,10 @@ router.get('/oauth/:provider', async (req, res, next) => {
       throw new AppError('Invalid OAuth provider', 400);
     }
 
-    const redirectUrl = `${req.protocol}://${req.get('host')}/api/auth/oauth/${provider}/callback`;
+    const publicApiUrl = trimTrailingSlash(
+      process.env.API_PUBLIC_URL || `${req.protocol}://${req.get('host')}`
+    );
+    const redirectUrl = `${publicApiUrl}/api/auth/oauth/${provider}/callback`;
     const supabase = getSupabaseAuthClient();
 
     const oauthProvider = provider === 'microsoft' ? 'azure' : 'google';
@@ -345,12 +350,15 @@ router.get('/oauth/:provider/callback', async (req, res, next) => {
       const { code } = req.query;
       const provider = req.params.provider;
 
-      if (!['google', 'microsoft'].includes(provider as string)) {
+    if (!['google', 'microsoft'].includes(provider as string)) {
       throw new AppError('Invalid OAuth provider', 400);
+    }
+    if (typeof code !== 'string' || !code) {
+      throw new AppError('OAuth callback code is missing', 400);
     }
 
     // Redirect to frontend with code for PKCE exchange
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = trimTrailingSlash(process.env.FRONTEND_URL || 'http://localhost:3000');
     const callbackUrl = new URL(`${frontendUrl}/auth/callback`);
     callbackUrl.searchParams.set('code', code as string);
     callbackUrl.searchParams.set('provider', provider);

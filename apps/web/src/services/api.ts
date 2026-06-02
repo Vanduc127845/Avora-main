@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../store/auth.store';
+import { API_BASE_URL } from './api-base-url';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 const DEFAULT_GET_CACHE_TTL_MS = 30_000;
 
 export interface ApiRequestConfig extends AxiosRequestConfig {
@@ -40,7 +40,10 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
+    const requestUrl = error.config?.url || '';
+    const isAuthRequest = requestUrl.startsWith('/api/auth/');
+
+    if (error.response?.status === 401 && !isAuthRequest) {
       useAuthStore.getState().logout();
       window.location.href = '/login';
     }
@@ -128,6 +131,12 @@ export async function post<T>(url: string, data?: any, config?: ApiRequestConfig
 
 export async function put<T>(url: string, data?: any, config?: ApiRequestConfig): Promise<T> {
   const response = await apiClient.put<T>(url, data, stripCustomConfig(config));
+  if (config?.invalidateCache !== false) clearApiCache();
+  return response.data;
+}
+
+export async function patch<T>(url: string, data?: any, config?: ApiRequestConfig): Promise<T> {
+  const response = await apiClient.patch<T>(url, data, stripCustomConfig(config));
   if (config?.invalidateCache !== false) clearApiCache();
   return response.data;
 }

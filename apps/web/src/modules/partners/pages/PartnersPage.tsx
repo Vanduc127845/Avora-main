@@ -94,7 +94,7 @@ const PartnersPage = () => {
     
     try {
       const result = await post<{ success: boolean; message?: string; delivery?: string }>('/api/partner-inquiry', formData);
-      setSubmissionNote(result.delivery === 'dry-run' ? result.message || 'Thông tin đã được ghi nhận ở chế độ demo.' : null);
+      setSubmissionNote(result.delivery !== 'sent' ? result.message || 'Sẽ liên hệ trong 24h' : null);
       setIsSubmitted(true);
     } catch (err) {
       const apiError = handleApiError(err);

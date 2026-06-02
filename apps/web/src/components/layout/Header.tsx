@@ -50,7 +50,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         <div className="flex min-w-0 items-center gap-3">
           <button
             onClick={onMenuClick}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 lg:hidden"
+            className="interactive-button inline-flex h-10 w-10 items-center justify-center rounded-xl border border-stone-200 text-stone-600 hover:border-sky-200 hover:bg-stone-100 hover:text-stone-950 lg:hidden"
             aria-label="Mở điều hướng"
           >
             <Menu className="h-5 w-5" />
@@ -62,8 +62,8 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
 
-        <div className="hidden max-w-md flex-1 items-center rounded-2xl border border-stone-200 bg-stone-50 px-3 py-2 lg:flex">
-          <Search className="h-4 w-4 text-stone-400" />
+        <div className="group hidden max-w-md flex-1 items-center rounded-2xl border border-stone-200 bg-stone-50 px-3 py-2 transition-all duration-200 ease-out hover:border-sky-200 hover:bg-white hover:shadow-sm focus-within:border-sky-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-sky-400/25 lg:flex">
+          <Search className="interactive-icon h-4 w-4 text-stone-400 group-focus-within:text-primary-600" />
           <input
             type="search"
             placeholder="Tìm việc làm, lộ trình, phỏng vấn..."
@@ -75,7 +75,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="hidden h-10 w-10 items-center justify-center rounded-xl border border-stone-200 text-stone-500 hover:bg-stone-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 sm:inline-flex"
+            className="interactive-button hidden h-10 w-10 items-center justify-center rounded-xl border border-stone-200 text-stone-500 hover:border-sky-200 hover:bg-stone-100 hover:text-stone-950 sm:inline-flex"
             aria-label="Thông báo"
           >
             <Bell className="h-5 w-5" />
@@ -85,18 +85,18 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <button
               type="button"
               onClick={() => setUserMenuOpen((value) => !value)}
-              className="flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-2 py-1.5 shadow-sm hover:bg-stone-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              className="interactive-button group flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-2 py-1.5 shadow-sm hover:border-sky-200 hover:bg-stone-50 hover:shadow-md"
               aria-expanded={userMenuOpen}
               aria-haspopup="true"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-100 text-sm font-bold text-primary-700">
+              <div className="interactive-icon flex h-9 w-9 items-center justify-center rounded-xl bg-primary-100 text-sm font-bold text-primary-700 group-hover:scale-105 group-hover:bg-primary-200">
                 {initials}
               </div>
               <div className="hidden min-w-0 text-left sm:block">
                 <p className="max-w-[140px] truncate text-sm font-semibold text-stone-900">{user?.name || 'Người dùng'}</p>
                 <p className="max-w-[140px] truncate text-xs text-stone-500">{user?.email || 'Đã đăng nhập'}</p>
               </div>
-              <ChevronDown className="hidden h-4 w-4 text-stone-400 sm:block" />
+              <ChevronDown className={`interactive-icon hidden h-4 w-4 text-stone-400 sm:block ${userMenuOpen ? 'rotate-180 text-primary-600' : 'group-hover:text-stone-700'}`} />
             </button>
 
             {userMenuOpen && (
@@ -110,7 +110,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   <Link
                     to="/profile"
                     onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
+                    className="interactive-button flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 hover:text-stone-950"
                   >
                     <User className="h-4 w-4" />
                     Hồ sơ
@@ -118,7 +118,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   <Link
                     to="/settings"
                     onClick={() => setUserMenuOpen(false)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
+                    className="interactive-button flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 hover:text-stone-950"
                   >
                     <Settings className="h-4 w-4" />
                     Cài đặt
@@ -129,7 +129,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                       logout();
                       setUserMenuOpen(false);
                     }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                    className="interactive-button flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700"
                   >
                     <LogOut className="h-4 w-4" />
                     Đăng xuất

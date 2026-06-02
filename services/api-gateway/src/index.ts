@@ -19,8 +19,14 @@ import { partnersRouter } from './routes/partners.routes.js';
 import { dashboardRouter } from './routes/dashboard.routes.js';
 import { agentMemoryRouter } from './routes/agent-memory.routes.js';
 import { speechToTextRouter } from './routes/speech-to-text.routes.js';
+import { confidenceRouter } from './routes/confidence.routes.js';
+import { settingsRouter } from './routes/settings.routes.js';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware.js';
-import { apiLimiter, getRateLimitStoreStatus } from './middleware/rate-limit.middleware.js';
+import {
+  apiLimiter,
+  getRateLimitStoreStatus,
+  logRateLimitStoreStartup,
+} from './middleware/rate-limit.middleware.js';
 import { getOptionalSupabaseAdmin, hasSupabaseConfig } from './utils/supabase.js';
 import { AIService } from './services/ai.service.js';
 
@@ -161,6 +167,8 @@ app.use('/api/interviews', interviewsRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/agent-memory', agentMemoryRouter);
 app.use('/api/speech-to-text', speechToTextRouter);
+app.use('/api/confidence', confidenceRouter);
+app.use('/api/settings', settingsRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api', partnersRouter);
 
@@ -171,6 +179,10 @@ await loadDemoData();
 
 app.listen(PORT, () => {
   logger.info(`API Gateway running on port ${PORT}`);
+  logRateLimitStoreStartup();
+  if (!process.env.RESEND_API_KEY) {
+    logger.warn('RESEND_API_KEY is not configured; partner inquiries will be accepted without email delivery');
+  }
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
     logger.info(`Demo auth persistence file: ${getDemoDataFile()}`);
   }
