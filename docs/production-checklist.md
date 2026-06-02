@@ -2,6 +2,18 @@
 
 Use this checklist before publishing Avora.
 
+## Hosted hackathon demo
+
+The current public demo uses:
+
+```text
+Web: https://avora-main-web.vercel.app
+API: https://avora-main.onrender.com
+API health: https://avora-main.onrender.com/health
+```
+
+The Render free instance may spin down after inactivity. Its first request can take longer while the service starts again.
+
 ## Local verification
 
 1. Install dependencies and create the shared root environment file:
@@ -107,6 +119,22 @@ AI_ENABLE_DEMO_FALLBACK=false
 
 Before connecting production traffic, run `infra/supabase/free-mvp-schema.sql` in Supabase SQL editor. It creates the production tables for profiles, settings, saved jobs, assessments, roadmap/interview data, confidence check-ins, partner inquiries, and per-agent memory. The schema enables row-level security for user-owned tables; the API uses the service role key only on the backend.
 
+## Social OAuth
+
+Follow [oauth-setup.md](oauth-setup.md) to configure Google and Microsoft sign-in. Provider credentials stay in Google Cloud, Microsoft Entra, and Supabase dashboards. Do not commit client secrets or place them in Vercel frontend variables.
+
+For the hosted demo, confirm that Supabase allows this browser redirect:
+
+```text
+https://avora-main-web.vercel.app/auth/callback
+```
+
+Register this Supabase provider callback with Google Cloud and Microsoft Entra:
+
+```text
+https://hquyyfqmdifhoevhdhlb.supabase.co/auth/v1/callback
+```
+
 Check AI status after deploy:
 
 ```powershell
@@ -162,7 +190,7 @@ Before opening to users, confirm:
 - `/ready` returns `status: "ok"` with Supabase, AI, and Redis checks.
 - `/api/ai/status` reports `configured: true`.
 - Register, login, forgot password, and reset password work from the deployed web domain.
-- Partner inquiry form sends an email to `PARTNER_EMAIL_TO`. If `RESEND_API_KEY` is missing or delivery fails, confirm the API accepts the inquiry with `delivery: "skipped"` or `delivery: "deferred"` and the UI shows `Sẽ liên hệ trong 24h`.
+- Partner inquiry form sends an email to `PARTNER_EMAIL_TO`. If `RESEND_API_KEY` is missing or delivery fails, confirm the API accepts the inquiry with `delivery: "skipped"` or `delivery: "deferred"` and the UI confirms that the team will respond within 24 hours.
 - OAuth redirect URLs in Supabase include `https://your-web-domain.com/auth/callback`. If using the API-started OAuth endpoints, also include `https://your-api-domain.com/api/auth/oauth/google/callback` and `https://your-api-domain.com/api/auth/oauth/microsoft/callback`.
 - `CORS_ORIGIN` contains the deployed web domain exactly.
 - `pnpm test:e2e:career` passes against the deployed API/web URLs using `API_URL` and `WEB_URL`.

@@ -9,7 +9,7 @@ An AI-powered career platform that helps people with disabilities move from self
 ![Vite](https://img.shields.io/badge/vite-8-646CFF?logo=vite&logoColor=white)
 ![Status](https://img.shields.io/badge/status-submission--ready%20MVP-0ea5e9)
 
-🚀 **[Live Demo](https://avora-main-web.vercel.app/)** | 🎥 **[Video Pitch](YOUR_LINK_HERE)**
+🚀 **[Live Demo](https://avora-main-web.vercel.app/)** | 🎥 **Video Pitch: coming soon**
 
 ## Vision
 
@@ -91,7 +91,7 @@ This repository is a submission-ready local MVP. The core web product runs end t
 - Career assessment, job analysis, roadmaps, mock interviews, confidence coaching, and partner inquiry handling.
 - Browser accessibility smoke coverage for desktop and mobile pages.
 
-Production release still requires real deployment credentials, deployed domains, CORS/OAuth redirect configuration, Redis-backed rate limiting, email delivery keys, and final manual accessibility QA.
+The hosted hackathon demo is available at [avora-main-web.vercel.app](https://avora-main-web.vercel.app/). The API runs on Render at [avora-main.onrender.com](https://avora-main.onrender.com/health). Public production hardening still requires Redis-backed rate limiting, email delivery keys, and final manual accessibility QA.
 
 ## Tech Stack
 
@@ -164,20 +164,44 @@ cd Avora-main
 3. Install dependencies:
 
 ```bash
-pnpm install
+pnpm install --frozen-lockfile
 ```
 
-4. Create the shared root environment file:
+4. Create the shared root environment file on Windows:
 
 ```powershell
 Copy-Item .env.example .env
+```
+
+On macOS or Linux, use:
+
+```bash
+cp .env.example .env
+```
+
+5. Start the API:
+
+```bash
+pnpm --filter @ai4a/api-gateway dev
+```
+
+6. In a second terminal, start the web app:
+
+```bash
+pnpm --filter @ai4a/web dev
+```
+
+7. Open:
+
+```text
+http://localhost:3000
 ```
 
 > 💡 **JUDGE'S NOTE: ZERO-CONFIG LOCAL MODE**
 >
 > You do NOT need production Supabase or AI provider keys to evaluate this project.
 >
-> Keep `AI_ENABLE_DEMO_FALLBACK=true` in the root `.env` file created from `.env.example`.
+> Keep `AI_ENABLE_DEMO_FALLBACK=true` and `VITE_ENABLE_OAUTH=false` in the root `.env` file created from `.env.example`.
 >
 > Avora will use local demo auth, mock data persistence, and fallback AI for the core evaluation flows: career assessment, job analysis, roadmaps, mock interviews, and confidence coaching.
 
@@ -200,6 +224,7 @@ AUTH_PASSWORD_RESET_DRY_RUN=true
 
 VITE_API_URL=http://localhost:4000
 VITE_APP_NAME=Avora
+VITE_ENABLE_OAUTH=false
 AI_ENABLE_DEMO_FALLBACK=true
 PARTNER_INQUIRY_DRY_RUN=true
 ```
@@ -236,6 +261,10 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 Run `infra/supabase/free-mvp-schema.sql` in the Supabase SQL editor before connecting production traffic.
+
+### Social OAuth providers
+
+Google and Microsoft client secrets are configured in provider dashboards, not in repository files. Follow [docs/oauth-setup.md](docs/oauth-setup.md) after the web app has a deployed URL. Set `VITE_ENABLE_OAUTH=true` only after the enabled Supabase providers have working callback URLs.
 
 ### Docker Compose
 
@@ -328,6 +357,7 @@ Avora-main/
 |   |-- terraform/           # Terraform scaffold
 |   `-- bicep/               # Azure Bicep scaffold
 |-- docs/
+|   |-- oauth-setup.md
 |   `-- production-checklist.md
 |-- docker-compose.yml
 |-- package.json
