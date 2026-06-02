@@ -17,14 +17,21 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        // Supabase processes the OAuth callback from URL hash
-        // Wait a bit for the session to be established
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const search = new URLSearchParams(window.location.search);
+        const code = search.get('code');
+        const next = search.get('next');
+        const destination = next?.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+        const { data: { session: initialSession }, error: sessionError } = await supabase.auth.getSession();
+        let session = initialSession;
 
         if (sessionError) {
           throw sessionError;
+        }
+
+        if (!session && code) {
+          const exchange = await supabase.auth.exchangeCodeForSession(code);
+          if (exchange.error) throw exchange.error;
+          session = exchange.data.session;
         }
 
         if (session) {
@@ -32,7 +39,7 @@ export default function AuthCallbackPage() {
           await initAuth();
           // Small delay to ensure state propagates
           await new Promise(resolve => setTimeout(resolve, 100));
-          navigate('/dashboard');
+          navigate(destination);
         } else {
           // Try one more time after a delay - OAuth can be slow
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -40,7 +47,7 @@ export default function AuthCallbackPage() {
           if (retry.data.session) {
             await initAuth();
             await new Promise(resolve => setTimeout(resolve, 100));
-            navigate('/dashboard');
+            navigate(destination);
           } else {
             navigate('/login');
           }

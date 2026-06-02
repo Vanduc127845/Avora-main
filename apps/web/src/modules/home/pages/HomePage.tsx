@@ -111,24 +111,13 @@ const FloatingParticles = ({ isDark }: { isDark: boolean }) => (
 
 const AnimatedGradient = ({ isDark }: { isDark: boolean }) => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-    <motion.div
+    <div
       className="absolute inset-0"
-      animate={{
+      style={{
         background: isDark
-          ? [
-              'linear-gradient(135deg, #09090b 0%, #18181b 50%, #09090b 100%)',
-              'linear-gradient(145deg, #09090b 0%, #1f1f23 50%, #09090b 100%)',
-              'linear-gradient(125deg, #09090b 0%, #18181b 50%, #09090b 100%)',
-              'linear-gradient(135deg, #09090b 0%, #18181b 50%, #09090b 100%)',
-            ]
-          : [
-              'linear-gradient(135deg, #f0f9ff 0%, #fafafa 50%, #f5f5f4 100%)',
-              'linear-gradient(145deg, #f0f9ff 0%, #f8fafc 50%, #f5f5f4 100%)',
-              'linear-gradient(125deg, #f0f9ff 0%, #fafafa 50%, #f5f5f4 100%)',
-              'linear-gradient(135deg, #f0f9ff 0%, #fafafa 50%, #f5f5f4 100%)',
-            ],
+          ? 'linear-gradient(135deg, #09090b 0%, #18181b 50%, #09090b 100%)'
+          : 'linear-gradient(135deg, #f0f9ff 0%, #fafafa 50%, #f5f5f4 100%)',
       }}
-      transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
     />
   </div>
 );
@@ -136,16 +125,9 @@ const AnimatedGradient = ({ isDark }: { isDark: boolean }) => (
 const FloatingLightBlobs = ({ isDark }: { isDark: boolean }) => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
     {/* Primary blob - top left */}
-    <motion.div
+    <div
       className="absolute w-[500px] h-[500px] rounded-full pointer-events-none"
       style={{ top: '5%', left: '-10%', filter: 'blur(100px)' }}
-      animate={{
-        y: [0, -50, 0],
-        x: [0, 20, 0],
-        opacity: [0.12, 0.18, 0.12],
-        scale: [1, 1.1, 1],
-      }}
-      transition={{ duration: 16, repeat: Infinity, delay: 0, ease: 'easeInOut' }}
     >
       <div
         className="w-full h-full rounded-full"
@@ -155,19 +137,12 @@ const FloatingLightBlobs = ({ isDark }: { isDark: boolean }) => (
             : 'radial-gradient(circle, rgba(14, 165, 233, 0.2) 0%, transparent 70%)',
         }}
       />
-    </motion.div>
+    </div>
 
     {/* Secondary blob - top right */}
-    <motion.div
+    <div
       className="absolute w-[400px] h-[400px] rounded-full pointer-events-none"
       style={{ top: '15%', right: '-5%', filter: 'blur(90px)' }}
-      animate={{
-        y: [0, -40, 0],
-        x: [0, -15, 0],
-        opacity: [0.1, 0.16, 0.1],
-        scale: [1, 1.08, 1],
-      }}
-      transition={{ duration: 14, repeat: Infinity, delay: 3, ease: 'easeInOut' }}
     >
       <div
         className="w-full h-full rounded-full"
@@ -177,19 +152,12 @@ const FloatingLightBlobs = ({ isDark }: { isDark: boolean }) => (
             : 'radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%)',
         }}
       />
-    </motion.div>
+    </div>
 
     {/* Tertiary blob - bottom */}
-    <motion.div
+    <div
       className="absolute w-[350px] h-[350px] rounded-full pointer-events-none"
       style={{ bottom: '10%', left: '20%', filter: 'blur(80px)' }}
-      animate={{
-        y: [0, 35, 0],
-        x: [0, 10, 0],
-        opacity: [0.08, 0.14, 0.08],
-        scale: [1, 1.12, 1],
-      }}
-      transition={{ duration: 18, repeat: Infinity, delay: 5, ease: 'easeInOut' }}
     >
       <div
         className="w-full h-full rounded-full"
@@ -199,21 +167,16 @@ const FloatingLightBlobs = ({ isDark }: { isDark: boolean }) => (
             : 'radial-gradient(circle, rgba(6, 182, 212, 0.12) 0%, transparent 70%)',
         }}
       />
-    </motion.div>
+    </div>
 
     {/* Accent blob - center glow */}
-    <motion.div
+    <div
       className="absolute w-64 h-64 rounded-full pointer-events-none"
       style={{
         top: '40%',
         right: '20%',
         filter: 'blur(120px)',
       }}
-      animate={{
-        opacity: [0.05, 0.1, 0.05],
-        scale: [1, 1.15, 1],
-      }}
-      transition={{ duration: 20, repeat: Infinity, delay: 2, ease: 'easeInOut' }}
     >
       <div
         className="w-full h-full rounded-full"
@@ -223,17 +186,12 @@ const FloatingLightBlobs = ({ isDark }: { isDark: boolean }) => (
             : 'radial-gradient(circle, rgba(14, 165, 233, 0.1) 0%, transparent 70%)',
         }}
       />
-    </motion.div>
+    </div>
 
     {/* Small accent - bottom right */}
-    <motion.div
+    <div
       className="absolute w-32 h-32 rounded-full pointer-events-none"
       style={{ bottom: '25%', right: '10%', filter: 'blur(60px)' }}
-      animate={{
-        y: [0, -25, 0],
-        opacity: [0.06, 0.1, 0.06],
-      }}
-      transition={{ duration: 12, repeat: Infinity, delay: 7, ease: 'easeInOut' }}
     >
       <div
         className="w-full h-full rounded-full"
@@ -243,7 +201,7 @@ const FloatingLightBlobs = ({ isDark }: { isDark: boolean }) => (
             : 'radial-gradient(circle, rgba(34, 211, 238, 0.1) 0%, transparent 70%)',
         }}
       />
-    </motion.div>
+    </div>
   </div>
 );
 
@@ -267,25 +225,13 @@ const FloatingIcons = ({ isDark }: { isDark: boolean }) => (
 const WaveAnimation = ({ isDark }: { isDark: boolean }) => (
   <div className="absolute -bottom-1 left-0 right-0 h-8 overflow-hidden">
     <svg className="absolute w-full h-full" viewBox="0 0 1200 60" preserveAspectRatio="none">
-      <motion.path
+      <path
         d="M0,30 Q150,0 300,30 T600,30 T900,30 T1200,30 L1200,60 L0,60 Z"
         fill={isDark ? '#18181b' : '#fafaf9'}
-        animate={{ d: [
-          "M0,30 Q150,0 300,30 T600,30 T900,30 T1200,30 L1200,60 L0,60 Z",
-          "M0,30 Q150,60 300,30 T600,30 T900,30 T1200,30 L1200,60 L0,60 Z",
-          "M0,30 Q150,0 300,30 T600,30 T900,30 T1200,30 L1200,60 L0,60 Z",
-        ] }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
       />
-      <motion.path
+      <path
         d="M0,35 Q150,5 300,35 T600,35 T900,35 T1200,35 L1200,60 L0,60 Z"
         fill={isDark ? '#27272a' : '#f5f5f4'}
-        animate={{ d: [
-          "M0,35 Q150,5 300,35 T600,35 T900,35 T1200,35 L1200,60 L0,60 Z",
-          "M0,35 Q150,65 300,35 T600,35 T900,35 T1200,35 L1200,60 L0,60 Z",
-          "M0,35 Q150,5 300,35 T600,35 T900,35 T1200,35 L1200,60 L0,60 Z",
-        ] }}
-        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
       />
     </svg>
   </div>
@@ -340,15 +286,14 @@ const ChatInterface = ({ isDark }: { isDark: boolean }) => {
       className="relative"
     >
       {/* Soft glow behind the chat */}
-      <motion.div 
+      <div
         className="absolute inset-0 rounded-2xl"
-        animate={{
+        style={{
           boxShadow: isDark 
-            ? ['0 0 60px rgba(14, 165, 233, 0.1)', '0 0 80px rgba(14, 165, 233, 0.15)', '0 0 60px rgba(14, 165, 233, 0.1)']
-            : ['0 0 60px rgba(14, 165, 233, 0.08)', '0 0 80px rgba(14, 165, 233, 0.12)', '0 0 60px rgba(14, 165, 233, 0.08)'],
+            ? '0 0 70px rgba(14, 165, 233, 0.12)'
+            : '0 0 70px rgba(14, 165, 233, 0.1)',
+          transform: 'scale(1.05)',
         }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ transform: 'scale(1.05)' }}
       />
       
       {/* Floating particles and icons */}

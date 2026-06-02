@@ -99,7 +99,7 @@ function AvatarStack() {
       {collaborators.map((person, index) => (
         <div
           key={person.name}
-          className={`flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-xs font-bold shadow-sm ${person.tone}`}
+          className={`interactive-icon flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-xs font-bold shadow-sm hover:z-10 hover:scale-105 ${person.tone}`}
           style={{ marginLeft: index === 0 ? 0 : -8 }}
           title={person.name}
         >
@@ -108,7 +108,7 @@ function AvatarStack() {
       ))}
       <Link
         to="/assessment"
-        className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-white text-stone-500 shadow-sm transition hover:text-stone-950"
+        className="interactive-button -ml-2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-white text-stone-500 shadow-sm hover:scale-105 hover:text-stone-950"
         aria-label="Add assessment context"
       >
         <Plus className="h-4 w-4" />
@@ -119,7 +119,7 @@ function AvatarStack() {
 
 function ProgressTrack({ items = progressTimeline }: { items?: typeof progressTimeline }) {
   return (
-    <div className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm">
+    <div className="interactive-card rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Pipeline</p>
@@ -127,7 +127,7 @@ function ProgressTrack({ items = progressTimeline }: { items?: typeof progressTi
         </div>
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 text-stone-500 transition hover:bg-stone-50 hover:text-stone-950"
+          className="interactive-button inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 text-stone-500 hover:border-sky-200 hover:bg-stone-50 hover:text-stone-950"
           aria-label="Pipeline settings"
         >
           <Settings2 className="h-4 w-4" />
@@ -142,7 +142,7 @@ function ProgressTrack({ items = progressTimeline }: { items?: typeof progressTi
               <span className="font-bold text-stone-950">{item.amount}</span>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-stone-100">
-              <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.value}%` }} />
+              <div className={`h-full rounded-full transition-[width] duration-300 ease-out ${item.color}`} style={{ width: `${item.value}%` }} />
             </div>
           </div>
         ))}
@@ -157,7 +157,7 @@ function WeeklyChart({ bars }: { bars: { label: string; value: number; color: st
       {bars.map((bar) => (
         <div key={bar.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
           <div className="flex h-28 w-full max-w-9 items-end rounded-full bg-white p-1 shadow-inner">
-            <div className={`w-full rounded-full ${bar.color}`} style={{ height: `${bar.value}%` }} />
+            <div className={`w-full rounded-full transition-[height] duration-300 ease-out ${bar.color}`} style={{ height: `${bar.value}%` }} />
           </div>
           <span className="text-[11px] font-bold text-stone-400">{bar.label}</span>
         </div>
@@ -289,12 +289,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5 text-stone-950">
-      <section className="overflow-hidden rounded-[32px] border border-stone-200 bg-white p-4 shadow-sm md:p-5">
+      <section className="interactive-card overflow-hidden rounded-[32px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5 md:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <AvatarStack />
-            <div className="flex h-10 min-w-0 items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 text-sm font-semibold text-stone-600">
-              <Search className="h-4 w-4 text-stone-400" />
+            <div className="group flex h-10 min-w-0 items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 text-sm font-semibold text-stone-600 transition-all duration-200 ease-out hover:border-sky-200 hover:bg-white hover:shadow-sm">
+              <Search className="interactive-icon h-4 w-4 text-stone-400 group-hover:text-primary-600" />
               <span className="truncate">Search insights, jobs, roadmaps</span>
             </div>
           </div>
@@ -302,17 +302,17 @@ export default function DashboardPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              className="inline-flex h-10 items-center gap-2 rounded-full border border-stone-200 bg-white px-4 text-sm font-bold text-stone-700 transition hover:bg-stone-50"
+              className="interactive-button inline-flex h-10 items-center gap-2 rounded-full border border-stone-200 bg-white px-4 text-sm font-bold text-stone-700 hover:border-sky-200 hover:bg-stone-50 hover:text-stone-950"
             >
               <Settings2 className="h-4 w-4" />
               Filters
             </button>
             <button
               type="button"
-              className="inline-flex h-10 items-center gap-2 rounded-full bg-stone-950 px-4 text-sm font-bold text-white transition hover:bg-stone-800"
+              className="interactive-button group inline-flex h-10 items-center gap-2 rounded-full bg-stone-950 px-4 text-sm font-bold text-white hover:bg-stone-800 hover:shadow-lg hover:shadow-stone-900/20"
             >
               May 2026
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="interactive-icon h-4 w-4 group-hover:translate-y-0.5" />
             </button>
           </div>
         </div>
@@ -347,14 +347,14 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 <Link
                   to="/assessment"
-                  className="inline-flex h-11 items-center rounded-full bg-primary-500 px-5 text-sm font-bold text-white shadow-sm shadow-primary-500/20 transition hover:bg-primary-600"
+                  className="interactive-button group inline-flex h-11 items-center rounded-full bg-primary-500 px-5 text-sm font-bold text-white shadow-sm shadow-primary-500/20 hover:bg-primary-600 hover:shadow-lg hover:shadow-primary-500/25"
                 >
                   Continue
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="interactive-icon ml-2 h-4 w-4 group-hover:translate-x-0.5" />
                 </Link>
                 <button
                   type="button"
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-stone-200 text-stone-500 transition hover:bg-stone-50 hover:text-stone-950"
+                  className="interactive-button inline-flex h-11 w-11 items-center justify-center rounded-full border border-stone-200 text-stone-500 hover:border-sky-200 hover:bg-stone-50 hover:text-stone-950"
                   aria-label="More dashboard actions"
                 >
                   <MoreHorizontal className="h-5 w-5" />
@@ -366,12 +366,12 @@ export default function DashboardPage() {
               {liveMetrics.map((metric) => {
                 const Icon = metric.icon;
                 return (
-                  <article key={metric.label} className={`rounded-[24px] border p-4 ${metric.tone}`}>
+                  <article key={metric.label} className={`interactive-card group rounded-[24px] border p-4 hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md hover:shadow-sky-950/5 ${metric.tone}`}>
                     <div className="flex items-center justify-between gap-3">
-                      <Icon className="h-5 w-5" />
-                      <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold">{metric.delta}</span>
+                      <Icon className="interactive-icon h-5 w-5 group-hover:scale-105" />
+                      <span className="interactive-card rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold group-hover:bg-white">{metric.delta}</span>
                     </div>
-                    <p className="mt-5 text-2xl font-bold text-stone-950">{metric.value}</p>
+                    <p className="interactive-icon mt-5 text-2xl font-bold text-stone-950 group-hover:text-stone-800">{metric.value}</p>
                     <p className="mt-1 text-sm font-semibold">{metric.label}</p>
                   </article>
                 );
@@ -384,8 +384,8 @@ export default function DashboardPage() {
               </div>
             )}
 
-            <div className="mt-5 rounded-[28px] border border-stone-200 bg-stone-50 p-3">
-              <div className="flex flex-col gap-3 rounded-[22px] bg-white p-4 shadow-sm lg:flex-row lg:items-center">
+            <div className="interactive-card mt-5 rounded-[28px] border border-stone-200 bg-stone-50 p-3 hover:border-sky-200">
+              <div className="flex flex-col gap-3 rounded-[22px] bg-white p-4 shadow-sm transition-shadow duration-200 ease-out hover:shadow-md lg:flex-row lg:items-center">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-700">
                     <BarChart3 className="h-5 w-5" />
@@ -407,7 +407,7 @@ export default function DashboardPage() {
                 </div>
                 <Link
                   to="/jobs"
-                  className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-stone-950 px-5 text-sm font-bold text-white transition hover:bg-stone-800"
+                  className="interactive-button inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-stone-950 px-5 text-sm font-bold text-white hover:bg-stone-800 hover:shadow-lg hover:shadow-stone-900/20"
                 >
                   Details
                 </Link>
@@ -416,7 +416,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-2">
-            <article className="rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm">
+            <article className="interactive-card group rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400">Top match</p>
               <p className="mt-3 text-3xl font-bold text-stone-950">{readiness}</p>
               <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-stone-500">
@@ -425,10 +425,10 @@ export default function DashboardPage() {
               </div>
             </article>
 
-            <article className="rounded-[24px] bg-stone-950 p-4 text-white shadow-sm">
+            <article className="interactive-card group rounded-[24px] bg-stone-950 p-4 text-white shadow-sm hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-300/15">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400">Best path</p>
-                <Sparkles className="h-4 w-4 text-amber-300" />
+                <Sparkles className="interactive-icon h-4 w-4 text-amber-300 group-hover:scale-105" />
               </div>
               <p className="mt-3 text-2xl font-bold">{user?.careerProfile?.targetRoles?.[0] || 'Assessment'}</p>
               <p className="mt-1 text-sm font-medium text-stone-300">
@@ -439,10 +439,10 @@ export default function DashboardPage() {
             {liveInsights.map((item) => {
               const Icon = item.icon;
               return (
-                <article key={item.label} className="rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm">
+                <article key={item.label} className="interactive-card group rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400">{item.label}</p>
-                    <Icon className="h-4 w-4 text-primary-500" />
+                    <Icon className="interactive-icon h-4 w-4 text-primary-500 group-hover:scale-105" />
                   </div>
                   <p className="mt-4 text-2xl font-bold text-stone-950">{item.value}</p>
                   <p className="mt-1 text-sm font-medium text-stone-500">{item.helper}</p>
@@ -455,7 +455,7 @@ export default function DashboardPage() {
 
       <section className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
         <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr] xl:grid-cols-1 2xl:grid-cols-[0.85fr_1.15fr]">
-          <div className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm">
+          <div className="interactive-card rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Channels</p>
@@ -463,7 +463,7 @@ export default function DashboardPage() {
               </div>
               <button
                 type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 text-stone-500 hover:bg-stone-50"
+                className="interactive-button inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 text-stone-500 hover:border-sky-200 hover:bg-stone-50 hover:text-stone-950"
                 aria-label="Module filters"
               >
                 <PanelTop className="h-4 w-4" />
@@ -485,10 +485,10 @@ export default function DashboardPage() {
                             ? '/roadmaps'
                             : '/interviews'
                     }
-                    className="flex items-center justify-between gap-3 rounded-[20px] border border-stone-100 bg-stone-50 p-3 transition hover:border-primary-200 hover:bg-primary-50"
+                    className="interactive-card focus-ring group flex items-center justify-between gap-3 rounded-[20px] border border-stone-100 bg-stone-50 p-3 hover:-translate-y-0.5 hover:border-primary-200 hover:bg-primary-50 hover:shadow-sm"
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className={`flex h-10 w-10 items-center justify-center rounded-full ${platform.bg} ${platform.color}`}>
+                      <span className={`interactive-icon flex h-10 w-10 items-center justify-center rounded-full group-hover:scale-105 group-hover:shadow-sm ${platform.bg} ${platform.color}`}>
                         <Icon className="h-5 w-5" />
                       </span>
                       <div className="min-w-0">
@@ -496,14 +496,14 @@ export default function DashboardPage() {
                         <p className="text-xs font-semibold text-stone-400">{platform.amount}</p>
                       </div>
                     </div>
-                    <span className="text-sm font-bold text-stone-950">{platform.value}</span>
+                    <span className="interactive-icon text-sm font-bold text-stone-950 group-hover:text-primary-700">{platform.value}</span>
                   </Link>
                 );
               })}
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm">
+          <div className="interactive-card rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
             <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Live mix</p>
@@ -511,7 +511,7 @@ export default function DashboardPage() {
               </div>
               <div className="inline-flex rounded-full bg-stone-100 p-1">
                 <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-bold text-white">Now</span>
-                <span className="px-3 py-1 text-xs font-bold text-stone-500">Goals</span>
+                <span className="interactive-card rounded-full px-3 py-1 text-xs font-bold text-stone-500 hover:bg-white hover:text-stone-800">Goals</span>
               </div>
             </div>
 
@@ -519,20 +519,20 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm">
+        <div className="interactive-card rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Avora modules</p>
               <h2 className="mt-1 text-xl font-bold text-stone-950">Module performance</h2>
             </div>
             <div className="flex items-center gap-2">
-              <button type="button" className="rounded-full bg-stone-100 px-3 py-1.5 text-xs font-bold text-stone-700">
+              <button type="button" className="interactive-button rounded-full bg-stone-100 px-3 py-1.5 text-xs font-bold text-stone-700 hover:bg-white hover:text-stone-950 hover:shadow-sm">
                 Readiness
               </button>
-              <button type="button" className="rounded-full px-3 py-1.5 text-xs font-bold text-stone-400">
+              <button type="button" className="interactive-button rounded-full px-3 py-1.5 text-xs font-bold text-stone-400 hover:bg-stone-100 hover:text-stone-700">
                 Fit
               </button>
-              <button type="button" className="rounded-full px-3 py-1.5 text-xs font-bold text-stone-400">
+              <button type="button" className="interactive-button rounded-full px-3 py-1.5 text-xs font-bold text-stone-400 hover:bg-stone-100 hover:text-stone-700">
                 Next
               </button>
             </div>
@@ -553,10 +553,10 @@ export default function DashboardPage() {
                 {liveTableRows.map((row) => {
                   const Icon = row.icon;
                   return (
-                    <tr key={row.module} className="rounded-[18px] bg-stone-50 text-sm">
+                    <tr key={row.module} className="dashboard-row group rounded-[18px] bg-stone-50 text-sm hover:bg-sky-50/70">
                       <td className="rounded-l-[18px] px-3 py-3">
                         <div className="flex items-center gap-3">
-                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm">
+                          <span className="interactive-icon flex h-9 w-9 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm group-hover:scale-105 group-hover:bg-primary-50">
                             <Icon className="h-4 w-4" />
                           </span>
                           <span className="font-bold text-stone-950">{row.module}</span>
@@ -568,7 +568,7 @@ export default function DashboardPage() {
                         <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-emerald-700">{row.trend}</span>
                       </td>
                       <td className="rounded-r-[18px] px-3 py-3">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-stone-950 px-3 py-1 text-xs font-bold text-white">
+                        <span className="interactive-icon inline-flex items-center gap-1 rounded-full bg-stone-950 px-3 py-1 text-xs font-bold text-white group-hover:scale-[1.02] group-hover:bg-stone-800">
                           <Check className="h-3 w-3" />
                           {row.status}
                         </span>
@@ -583,7 +583,7 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1fr_360px]">
-        <div className="rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm">
+        <div className="interactive-card rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Recommended work</p>
@@ -599,19 +599,19 @@ export default function DashboardPage() {
                 <Link
                   key={action.title}
                   to={action.path}
-                  className="group min-h-[190px] rounded-[24px] border border-stone-100 bg-stone-50 p-4 transition hover:-translate-y-0.5 hover:border-primary-200 hover:bg-white hover:shadow-lg hover:shadow-primary-950/5"
+                  className="interactive-card group min-h-[190px] rounded-[24px] border border-stone-100 bg-stone-50 p-4 hover:-translate-y-0.5 hover:border-primary-200 hover:bg-white hover:shadow-lg hover:shadow-primary-950/5 focus-ring"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm">
+                    <span className="interactive-icon flex h-11 w-11 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm group-hover:scale-105 group-hover:bg-primary-50">
                       <Icon className="h-5 w-5" />
                     </span>
-                    <span className="rounded-full bg-primary-100 px-2.5 py-1 text-xs font-bold text-primary-700">{action.status}</span>
+                    <span className="interactive-card rounded-full bg-primary-100 px-2.5 py-1 text-xs font-bold text-primary-700 group-hover:bg-primary-200">{action.status}</span>
                   </div>
                   <h3 className="mt-5 text-base font-bold text-stone-950">{action.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-stone-500">{action.description}</p>
                   <div className="mt-4 inline-flex items-center text-sm font-bold text-stone-950">
                     Open
-                    <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-1" />
+                    <ArrowRight className="interactive-icon ml-2 h-4 w-4 group-hover:translate-x-1" />
                   </div>
                 </Link>
               );
@@ -622,10 +622,10 @@ export default function DashboardPage() {
         <ProgressTrack items={liveProgressTimeline} />
       </section>
 
-      <section className="rounded-[28px] border border-primary-100 bg-primary-50 p-4 shadow-sm">
+      <section className="interactive-card rounded-[28px] border border-primary-100 bg-primary-50 p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm">
+            <span className="interactive-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm">
               <HeartPulse className="h-5 w-5" />
             </span>
             <div>
@@ -637,10 +637,10 @@ export default function DashboardPage() {
           </div>
           <Link
             to="/settings"
-            className="inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-bold text-stone-950 shadow-sm transition hover:bg-primary-100"
+            className="interactive-button group inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-bold text-stone-950 shadow-sm hover:bg-primary-100 hover:shadow-md"
           >
             Review settings
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <ArrowRight className="interactive-icon ml-2 h-4 w-4 group-hover:translate-x-0.5" />
           </Link>
         </div>
       </section>

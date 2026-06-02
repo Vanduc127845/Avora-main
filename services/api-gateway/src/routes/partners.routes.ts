@@ -2,8 +2,16 @@ import { Router } from 'express';
 import { Resend } from 'resend';
 import { z } from 'zod';
 import { logger } from '../utils/logger.js';
+import {
+  createId,
+  demoPartnerInquiries,
+  type DemoPartnerInquiry,
+} from '../data/demo-store.js';
+import { saveDemoData } from '../data/demo-persistence.js';
+import { getOptionalSupabaseAdmin } from '../utils/supabase.js';
 
 export const partnersRouter: Router = Router();
+const deferredPartnerMessage = 'Sẽ liên hệ trong 24h';
 
 const partnerSchema = z.object({
   organizationName: z.string().min(1, 'Organization name is required'),
@@ -24,6 +32,71 @@ const escapeHtml = (value: string) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 
+const persistPartnerInquiry = async (
+  data: z.infer<typeof partnerSchema>,
+  partnershipType: string
+): Promise<DemoPartnerInquiry> => {
+  const timestamp = new Date().toISOString();
+  const inquiry: DemoPartnerInquiry = {
+    id: createId('partner'),
+    organizationName: data.organizationName,
+    contactPerson: data.contactPerson,
+    email: data.email,
+    phone: data.phone,
+    website: data.website,
+    companySize: data.companySize,
+    partnershipType,
+    message: data.message,
+    emailDelivery: 'pending',
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+  const supabase = getOptionalSupabaseAdmin();
+
+  if (supabase) {
+    const { error } = await supabase.from('partner_inquiries').insert({
+      id: inquiry.id,
+      organization_name: inquiry.organizationName,
+      contact_person: inquiry.contactPerson,
+      email: inquiry.email,
+      phone: inquiry.phone || null,
+      website: inquiry.website || null,
+      company_size: inquiry.companySize || null,
+      partnership_type: inquiry.partnershipType,
+      message: inquiry.message || null,
+      email_delivery: inquiry.emailDelivery,
+      created_at: inquiry.createdAt,
+      updated_at: inquiry.updatedAt,
+    });
+    if (error) throw error;
+    return inquiry;
+  }
+
+  demoPartnerInquiries.set(inquiry.id, inquiry);
+  await saveDemoData();
+  return inquiry;
+};
+
+const updatePartnerDelivery = async (
+  inquiry: DemoPartnerInquiry,
+  emailDelivery: DemoPartnerInquiry['emailDelivery']
+) => {
+  const updatedAt = new Date().toISOString();
+  const supabase = getOptionalSupabaseAdmin();
+
+  if (supabase) {
+    const { error } = await supabase
+      .from('partner_inquiries')
+      .update({ email_delivery: emailDelivery, updated_at: updatedAt })
+      .eq('id', inquiry.id);
+    if (error) logger.warn('partner-inquiry-delivery-status-update-failed', { error });
+    return;
+  }
+
+  demoPartnerInquiries.set(inquiry.id, { ...inquiry, emailDelivery, updatedAt });
+  await saveDemoData();
+};
+
 partnersRouter.post('/partner-inquiry', async (req, res) => {
   try {
     const data = partnerSchema.parse(req.body);
@@ -36,6 +109,7 @@ partnersRouter.post('/partner-inquiry', async (req, res) => {
     };
 
     const partnershipType = partnershipTypeLabels[data.partnershipType] || data.partnershipType;
+    const inquiry = await persistPartnerInquiry(data, partnershipType);
     const safe = {
       organizationName: escapeHtml(data.organizationName),
       contactPerson: escapeHtml(data.contactPerson),
@@ -48,24 +122,17 @@ partnersRouter.post('/partner-inquiry', async (req, res) => {
     };
 
     if (!process.env.RESEND_API_KEY) {
-      logger.warn('partner-inquiry-dry-run', {
+      logger.warn('partner-inquiry-email-skipped', {
         organizationName: data.organizationName,
         partnershipType,
         email: data.email,
       });
-
-      if (process.env.NODE_ENV === 'production' && process.env.PARTNER_INQUIRY_DRY_RUN !== 'true') {
-        res.status(503).json({
-          error: 'Partner inquiry email is not configured',
-          message: 'Set RESEND_API_KEY or enable PARTNER_INQUIRY_DRY_RUN=true.',
-        });
-        return;
-      }
+      await updatePartnerDelivery(inquiry, 'skipped');
 
       res.status(202).json({
         success: true,
-        delivery: 'dry-run',
-        message: 'Partner inquiry captured in demo mode. Configure RESEND_API_KEY for email delivery.',
+        delivery: 'skipped',
+        message: deferredPartnerMessage,
       });
       return;
     }
@@ -145,15 +212,33 @@ partnersRouter.post('/partner-inquiry', async (req, res) => {
 </html>
     `;
 
-    await resend.emails.send({
-      from: 'Avora Partners <onboarding@resend.dev>',
-      to: process.env.PARTNER_EMAIL_TO || 'homiepc2019@gmail.com',
-      subject: `New Partnership Inquiry: ${data.organizationName} - ${partnershipType}`,
-      html: emailContent,
-      replyTo: data.email,
-    });
+    try {
+      const result = await resend.emails.send({
+        from: 'Avora Partners <onboarding@resend.dev>',
+        to: process.env.PARTNER_EMAIL_TO || 'homiepc2019@gmail.com',
+        subject: `New Partnership Inquiry: ${data.organizationName} - ${partnershipType}`,
+        html: emailContent,
+        replyTo: data.email,
+      });
+      if (result.error) throw result.error;
+      await updatePartnerDelivery(inquiry, 'sent');
 
-    res.status(200).json({ success: true, message: 'Partner inquiry submitted successfully' });
+      res.status(200).json({
+        success: true,
+        delivery: 'sent',
+        message: 'Partner inquiry submitted successfully',
+      });
+    } catch (error) {
+      logger.warn('partner-inquiry-email-failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      await updatePartnerDelivery(inquiry, 'deferred');
+      res.status(202).json({
+        success: true,
+        delivery: 'deferred',
+        message: deferredPartnerMessage,
+      });
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: 'Validation failed', details: error.errors });

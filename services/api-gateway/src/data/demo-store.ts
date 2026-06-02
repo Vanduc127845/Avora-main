@@ -168,6 +168,48 @@ export type DemoAgentMemory = {
   facts: string[];
   updatedAt: string;
 };
+export type DemoConfidenceEntry = {
+  id: string;
+  userId: string;
+  mood: 'steady' | 'uncertain' | 'blocked' | 'confident';
+  win: string;
+  blocker: string;
+  nextStep: string;
+  coachReply: string;
+  createdAt: string;
+};
+export type DemoUserSettings = {
+  userId: string;
+  notifications: {
+    emailNotifications: boolean;
+    pushNotifications: boolean;
+    weeklyDigest: boolean;
+    interviewReminders: boolean;
+  };
+  privacy: {
+    shareProfile: boolean;
+    shareProgress: boolean;
+    anonymousAnalytics: boolean;
+  };
+  language: string;
+  timezone: string;
+  disconnectedProviders: string[];
+  updatedAt: string;
+};
+export type DemoPartnerInquiry = {
+  id: string;
+  organizationName: string;
+  contactPerson: string;
+  email: string;
+  phone?: string;
+  website?: string;
+  companySize?: string;
+  partnershipType: string;
+  message?: string;
+  emailDelivery: 'pending' | 'sent' | 'skipped' | 'deferred';
+  createdAt: string;
+  updatedAt: string;
+};
 
 export const demoUsers = new Map<string, DemoUser>();
 export const demoPasswordResetTokens = new Map<string, { userId: string; expiresAt: Date }>();
@@ -177,3 +219,6 @@ export const demoAssessments = new Map<string, Assessment>();
 export const demoRoadmaps = new Map<string, Roadmap>();
 export const demoInterviews = new Map<string, InterviewSession>();
 export const demoAgentMemories = new Map<string, DemoAgentMemory>();
+export const demoConfidenceEntries = new Map<string, DemoConfidenceEntry>();
+export const demoSettings = new Map<string, DemoUserSettings>();
+export const demoPartnerInquiries = new Map<string, DemoPartnerInquiry>();

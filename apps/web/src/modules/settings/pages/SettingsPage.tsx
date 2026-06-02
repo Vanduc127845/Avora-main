@@ -8,7 +8,15 @@ import {
 import { Button } from '../../../components/ui';
 import { useAuthStore } from '../../../store';
 import { DEFAULT_ACCESSIBILITY_SETTINGS, useAccessibility } from '../../../store/accessibility.store';
-import { handleApiError, userService } from '../../../services';
+import {
+  DEFAULT_USER_SETTINGS,
+  handleApiError,
+  settingsService,
+  userService,
+  type SettingsUpdate,
+  type UserSettings,
+} from '../../../services';
+import { supabase } from '../../../services/supabase';
 
 const fadeUp = {
   initial: { opacity: 0, y: 16 },
@@ -77,9 +85,11 @@ function SettingsSection({ icon: Icon, title, children, accentColor }: {
 }
 
 // Password input with visibility toggle
-function PasswordInput({ label, id, placeholder = "Enter password" }: {
+function PasswordInput({ label, id, value, onChange, placeholder = "Enter password" }: {
   label: string;
   id: string;
+  value: string;
+  onChange: (value: string) => void;
   placeholder?: string;
 }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -93,6 +103,8 @@ function PasswordInput({ label, id, placeholder = "Enter password" }: {
         <input
           id={id}
           type={showPassword ? 'text' : 'password'}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
           className="input pr-12"
           placeholder={placeholder}
         />
@@ -119,6 +131,18 @@ export default function SettingsPage() {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingAccessibility, setIsSavingAccessibility] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [appSettings, setAppSettings] = useState<UserSettings>({
+    ...DEFAULT_USER_SETTINGS,
+    notifications: { ...DEFAULT_USER_SETTINGS.notifications },
+    privacy: { ...DEFAULT_USER_SETTINGS.privacy },
+    disconnectedProviders: [],
+    userId: user?.id || '',
+    updatedAt: '',
+  });
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -136,6 +160,10 @@ export default function SettingsPage() {
           name: response.user.name || 'User',
           email: response.user.email || 'user@example.com',
         });
+
+        const settingsResponse = await settingsService.get();
+        if (!isMounted) return;
+        setAppSettings(settingsResponse.settings);
       } catch (error) {
         const apiError = handleApiError(error);
         console.warn('Unable to load profile from API:', apiError.error);
@@ -196,6 +224,100 @@ export default function SettingsPage() {
   const handleResetAccessibility = async () => {
     resetSettings();
     await handleSaveAccessibility(DEFAULT_ACCESSIBILITY_SETTINGS);
+  };
+
+  const handleSaveSettings = async (updates: SettingsUpdate) => {
+    setIsSavingSettings(true);
+    setSaveError(null);
+    setSaveMessage(null);
+
+    try {
+      const response = await settingsService.update(updates);
+      setAppSettings(response.settings);
+      setSaveMessage('Đã lưu');
+      return true;
+    } catch (error) {
+      const apiError = handleApiError(error);
+      setSaveError(apiError.message || apiError.error);
+      return false;
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleDownloadData = async () => {
+    setIsDownloading(true);
+    setSaveError(null);
+    setSaveMessage(null);
+
+    try {
+      const data = await settingsService.exportData();
+      const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {
+        type: 'application/json',
+      }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `avora-data-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setSaveMessage('Đã lưu');
+    } catch (error) {
+      const apiError = handleApiError(error);
+      setSaveError(apiError.message || apiError.error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleSetPassword = async () => {
+    if (newPassword.length < 8) {
+      setSaveError('Password must be at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setSaveError('Passwords do not match.');
+      return;
+    }
+
+    if (await handleSaveSettings({ account: { password: newPassword } })) {
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    setSaveError(null);
+    setSaveMessage(null);
+
+    try {
+      if (supabase) {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        const identity = data.user?.identities?.find((item) => item.provider === 'google');
+        if (identity) {
+          const { error: unlinkError } = await supabase.auth.unlinkIdentity(identity);
+          if (unlinkError) throw unlinkError;
+        }
+      }
+
+      await handleSaveSettings({ account: { disconnectedProvider: 'google' } });
+    } catch (error) {
+      const apiError = handleApiError(error);
+      setSaveError(apiError.message || apiError.error);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!confirm('Are you sure you want to delete your account? This cannot be undone.')) return;
+
+    setSaveError(null);
+    try {
+      await userService.deleteAccount();
+      logout();
+    } catch (error) {
+      const apiError = handleApiError(error);
+      setSaveError(apiError.message || apiError.error);
+    }
   };
 
   const sections = [
@@ -422,26 +544,34 @@ export default function SettingsPage() {
                 <Toggle
                   label="Email notifications"
                   description="Updates about your progress and recommendations"
-                  enabled={true}
-                  onChange={() => {}}
+                  enabled={appSettings.notifications.emailNotifications}
+                  onChange={() => handleSaveSettings({
+                    notifications: { emailNotifications: !appSettings.notifications.emailNotifications },
+                  })}
                 />
                 <Toggle
                   label="Push notifications"
                   description="Real-time alerts in your browser"
-                  enabled={false}
-                  onChange={() => {}}
+                  enabled={appSettings.notifications.pushNotifications}
+                  onChange={() => handleSaveSettings({
+                    notifications: { pushNotifications: !appSettings.notifications.pushNotifications },
+                  })}
                 />
                 <Toggle
                   label="Weekly digest"
                   description="Summary of your career journey"
-                  enabled={true}
-                  onChange={() => {}}
+                  enabled={appSettings.notifications.weeklyDigest}
+                  onChange={() => handleSaveSettings({
+                    notifications: { weeklyDigest: !appSettings.notifications.weeklyDigest },
+                  })}
                 />
                 <Toggle
                   label="Interview reminders"
                   description="Get reminded before practice sessions"
-                  enabled={true}
-                  onChange={() => {}}
+                  enabled={appSettings.notifications.interviewReminders}
+                  onChange={() => handleSaveSettings({
+                    notifications: { interviewReminders: !appSettings.notifications.interviewReminders },
+                  })}
                 />
               </SettingsSection>
             )}
@@ -457,20 +587,26 @@ export default function SettingsPage() {
                 <Toggle
                   label="Profile visibility"
                   description="Allow career mentors to view your profile"
-                  enabled={false}
-                  onChange={() => {}}
+                  enabled={appSettings.privacy.shareProfile}
+                  onChange={() => handleSaveSettings({
+                    privacy: { shareProfile: !appSettings.privacy.shareProfile },
+                  })}
                 />
                 <Toggle
                   label="Progress sharing"
                   description="Share achievements with the community"
-                  enabled={true}
-                  onChange={() => {}}
+                  enabled={appSettings.privacy.shareProgress}
+                  onChange={() => handleSaveSettings({
+                    privacy: { shareProgress: !appSettings.privacy.shareProgress },
+                  })}
                 />
                 <Toggle
                   label="Usage analytics"
                   description="Help improve the platform with anonymous data"
-                  enabled={true}
-                  onChange={() => {}}
+                  enabled={appSettings.privacy.anonymousAnalytics}
+                  onChange={() => handleSaveSettings({
+                    privacy: { anonymousAnalytics: !appSettings.privacy.anonymousAnalytics },
+                  })}
                 />
 
                 <div className="p-6 space-y-4">
@@ -479,7 +615,7 @@ export default function SettingsPage() {
                     Download a copy of your data or delete your account at any time.
                   </p>
                   <div className="flex gap-3">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={handleDownloadData} isLoading={isDownloading}>
                       <Download className="w-4 h-4 mr-2" />
                       Download data
                     </Button>
@@ -496,7 +632,12 @@ export default function SettingsPage() {
                     <label htmlFor="language" className="block text-sm font-medium text-stone-700">
                       Language
                     </label>
-                    <select id="language" className="input">
+                    <select
+                      id="language"
+                      className="input"
+                      value={appSettings.language}
+                      onChange={(event) => handleSaveSettings({ language: event.target.value })}
+                    >
                       <option value="en">English</option>
                       <option value="vi">Tiếng Việt</option>
                       <option value="es">Español</option>
@@ -508,7 +649,12 @@ export default function SettingsPage() {
                     <label htmlFor="timezone" className="block text-sm font-medium text-stone-700">
                       Time zone
                     </label>
-                    <select id="timezone" className="input">
+                    <select
+                      id="timezone"
+                      className="input"
+                      value={appSettings.timezone}
+                      onChange={(event) => handleSaveSettings({ timezone: event.target.value })}
+                    >
                       <option value="auto">Auto-detect</option>
                       <option value="utc">UTC</option>
                       <option value="est">Eastern Time (ET)</option>
@@ -529,9 +675,19 @@ export default function SettingsPage() {
                     <p className="text-sm text-stone-500">
                       Your account is connected via OAuth. You can add a password for additional security.
                     </p>
-                    <PasswordInput label="New password" id="new-password" />
-                    <PasswordInput label="Confirm password" id="confirm-password" />
-                    <Button variant="outline">
+                    <PasswordInput
+                      label="New password"
+                      id="new-password"
+                      value={newPassword}
+                      onChange={setNewPassword}
+                    />
+                    <PasswordInput
+                      label="Confirm password"
+                      id="confirm-password"
+                      value={confirmPassword}
+                      onChange={setConfirmPassword}
+                    />
+                    <Button variant="outline" onClick={handleSetPassword} isLoading={isSavingSettings}>
                       Set password
                     </Button>
                   </div>
@@ -553,11 +709,18 @@ export default function SettingsPage() {
                           </svg>
                           <div>
                             <p className="font-medium text-stone-800">Google</p>
-                            <p className="text-xs text-stone-500">Connected</p>
+                            <p className="text-xs text-stone-500">
+                              {appSettings.disconnectedProviders.includes('google') ? 'Disconnected' : 'Connected'}
+                            </p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm">
-                          Disconnect
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleDisconnectGoogle}
+                          disabled={appSettings.disconnectedProviders.includes('google') || isSavingSettings}
+                        >
+                          {appSettings.disconnectedProviders.includes('google') ? 'Disconnected' : 'Disconnect'}
                         </Button>
                       </div>
                     </div>
@@ -583,11 +746,7 @@ export default function SettingsPage() {
                       <Button 
                         variant="outline" 
                         className="border-error-300 text-error-600 hover:bg-error-50 flex-shrink-0"
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete your account? This cannot be undone.')) {
-                            logout();
-                          }
-                        }}
+                        onClick={handleDeleteAccount}
                       >
                         <LogOut className="w-4 h-4 mr-2" />
                         Delete account

@@ -104,6 +104,30 @@
     @apply transition-shadow duration-200;
   }
 
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2;
+  }
+
+  .interactive-card {
+    @apply transition-all duration-200 ease-out motion-reduce:transform-none motion-reduce:transition-none;
+  }
+
+  .interactive-button {
+    @apply transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 active:scale-[0.98] motion-reduce:transform-none motion-reduce:transition-none;
+  }
+
+  .interactive-icon {
+    @apply transition-all duration-200 ease-out motion-reduce:transform-none motion-reduce:transition-none;
+  }
+
+  .sidebar-item {
+    @apply transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 hover:-translate-y-0.5 motion-reduce:transform-none motion-reduce:transition-none;
+  }
+
+  .dashboard-row {
+    @apply transition-colors duration-200 ease-out;
+  }
+
   /* Input base */
   .input {
     @apply w-full px-4 py-3 rounded-xl border border-stone-200 bg-white;

@@ -20,15 +20,6 @@ var tags = {
 }
 
 // ============================================
-// Resource Group
-// ============================================
-resource resourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' = {
-  name: 'rg-${resourcePrefix}'
-  location: location
-  tags: tags
-}
-
-// ============================================
 // Azure OpenAI Service
 // ============================================
 resource openAiAccount 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
@@ -422,4 +413,4 @@ output cosmosDbEndpoint string = cosmosDbAccount.properties.documentEndpoint
 output storageAccountName string = storageAccount.name
 output keyVaultName string = keyVault.name
 output applicationInsightsInstrumentationKey string = applicationInsights.properties.InstrumentationKey
-output resourceGroupName string = resourceGroup.name
+output resourceGroupName string = resourceGroup().name

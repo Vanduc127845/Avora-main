@@ -12,20 +12,15 @@ import {
   Star,
   Trash2,
 } from 'lucide-react';
-import { handleApiError, post } from '../../../services';
+import {
+  confidenceService,
+  handleApiError,
+  post,
+  type ConfidenceEntry,
+} from '../../../services';
 import { useAuthStore } from '../../../store';
 
-type Mood = 'steady' | 'uncertain' | 'blocked' | 'confident';
-
-type ConfidenceEntry = {
-  id: string;
-  mood: Mood;
-  win: string;
-  blocker: string;
-  nextStep: string;
-  coachReply: string;
-  createdAt: string;
-};
+type Mood = ConfidenceEntry['mood'];
 
 const storageKey = (userId?: string) => `avora-confidence-${userId || 'demo'}`;
 
@@ -62,6 +57,20 @@ export default function ConfidencePage() {
     } catch {
       setEntries([]);
     }
+
+    let active = true;
+    void confidenceService
+      .list()
+      .then(({ entries: remoteEntries }) => {
+        if (!active) return;
+        setEntries(remoteEntries);
+        window.localStorage.setItem(storageKey(user?.id), JSON.stringify(remoteEntries));
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
   }, [user?.id]);
 
   const persistEntries = (next: ConfidenceEntry[]) => {
@@ -114,7 +123,16 @@ export default function ConfidencePage() {
         coachReply: reply,
         createdAt: new Date().toISOString(),
       };
-      persistEntries([entry, ...entries]);
+      const optimisticEntries = [entry, ...entries];
+      persistEntries(optimisticEntries);
+      try {
+        const { entry: savedEntry } = await confidenceService.create(entry);
+        persistEntries(
+          optimisticEntries.map((item) => (item.id === savedEntry.id ? savedEntry : item))
+        );
+      } catch {
+        setError('Check-in đã được lưu trên thiết bị nhưng chưa thể đồng bộ lên máy chủ.');
+      }
       setCoachReply(reply);
       setWin('');
       setBlocker('');
@@ -143,8 +161,15 @@ export default function ConfidencePage() {
     }
   };
 
-  const deleteEntry = (id: string) => {
+  const deleteEntry = async (id: string) => {
+    const previousEntries = entries;
     persistEntries(entries.filter((entry) => entry.id !== id));
+    try {
+      await confidenceService.delete(id);
+    } catch {
+      persistEntries(previousEntries);
+      setError('Không thể xóa check-in trên máy chủ. Vui lòng thử lại.');
+    }
   };
 
   const achievements = [

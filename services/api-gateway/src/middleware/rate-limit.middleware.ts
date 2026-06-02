@@ -22,6 +22,7 @@ const fallbackHits = new Map<string, LocalHit>();
 
 let redisClient: InstanceType<typeof Redis> | null = null;
 let redisErrorLogged = false;
+let startupStoreLogged = false;
 
 const getRedisClient = () => {
   if (!redisStoreEnabled || !redisUrl) return null;
@@ -173,3 +174,17 @@ export const getRateLimitStoreStatus = () => ({
   redisConfigured: Boolean(redisUrl),
   redisStatus: redisClient?.status || 'not-created',
 });
+
+export const logRateLimitStoreStartup = () => {
+  if (startupStoreLogged) return;
+  startupStoreLogged = true;
+
+  if (!redisUrl) {
+    logger.warn('REDIS_URL is not configured; using process-local in-memory rate limits');
+    return;
+  }
+
+  if (!redisStoreEnabled) {
+    logger.warn('RATE_LIMIT_STORE is not set to redis; using process-local in-memory rate limits');
+  }
+};

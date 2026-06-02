@@ -121,7 +121,7 @@ export default function AvoraChatWidget() {
   return (
     <div className="fixed bottom-5 right-5 z-[70]">
       {isOpen && (
-        <div className="mb-3 flex h-[560px] max-h-[calc(100vh-7rem)] w-[390px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl">
+        <div className="interactive-card mb-3 flex h-[560px] max-h-[calc(100vh-7rem)] w-[390px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl">
           <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
             <div className="flex min-w-0 items-center gap-2">
               <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary-100 text-primary-700">
@@ -135,7 +135,7 @@ export default function AvoraChatWidget() {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="rounded-lg p-2 text-stone-500 hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              className="interactive-button rounded-lg p-2 text-stone-500 hover:bg-stone-100 hover:text-stone-900"
               aria-label="Đóng chat AI Avora"
             >
               <X className="h-5 w-5" />
@@ -183,14 +183,14 @@ export default function AvoraChatWidget() {
                   }
                 }}
                 placeholder={`Hỏi ${agent.agentName}...`}
-                className="input flex-1"
+                className="input flex-1 transition-all duration-200 ease-out focus:border-sky-300 focus:ring-sky-400/25"
                 disabled={isSending}
               />
               <button
                 type="button"
                 onClick={speechInput.toggle}
                 disabled={isSending}
-                className={`flex h-12 w-12 items-center justify-center rounded-xl border focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`interactive-button flex h-12 w-12 items-center justify-center rounded-xl border disabled:cursor-not-allowed disabled:opacity-50 ${
                   speechInput.isListening
                     ? 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100'
                     : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50 hover:text-primary-700'
@@ -211,7 +211,7 @@ export default function AvoraChatWidget() {
                 type="button"
                 onClick={sendMessage}
                 disabled={isSending || !input.trim()}
-                className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="interactive-button flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-white hover:bg-primary-700 hover:shadow-lg hover:shadow-primary-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label={`Gửi tin nhắn cho ${agent.agentName}`}
               >
                 <Send className="h-5 w-5" />
@@ -232,7 +232,7 @@ export default function AvoraChatWidget() {
       <button
         type="button"
         onClick={() => setIsOpen((value) => !value)}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-600 text-white shadow-xl hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+        className="interactive-button flex h-14 w-14 items-center justify-center rounded-full bg-primary-600 text-white shadow-xl hover:scale-[1.06] hover:bg-primary-700 hover:shadow-2xl hover:shadow-primary-500/30 active:scale-[0.96]"
         aria-label={`Mở chat ${agent.agentName}`}
       >
         {isOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}

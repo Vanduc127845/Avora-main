@@ -40,7 +40,7 @@ New-AzResourceGroup -Name $resourceGroup -Location $location
 New-AzResourceGroupDeployment `
   -ResourceGroupName $resourceGroup `
   -TemplateFile ./main.bicep `
-  -TemplateParameterFile ./parameters.json `
+  -TemplateParameterFile ./azuredeploy.parameters.json `
   -environment "dev" `
   -location $location `
   -uniquePrefix "ai4a"
@@ -63,7 +63,7 @@ az group create --name $RESOURCE_GROUP --location $LOCATION
 az deployment group create \
   --resource-group $RESOURCE_GROUP \
   --template-file ./main.bicep \
-  --parameters ./parameters.json \
+  --parameters @azuredeploy.parameters.json \
   --parameters environment=dev \
   --parameters location=$LOCATION \
   --parameters uniquePrefix=ai4a

@@ -48,12 +48,12 @@ export default function AgentContextBanner() {
 
   return (
     <section
-      className="mb-6 overflow-hidden rounded-2xl border border-primary-100 bg-white shadow-sm"
+      className="interactive-card group mb-6 overflow-hidden rounded-2xl border border-primary-100 bg-white shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5"
       aria-label={`Ngữ cảnh ${agent.agentName}`}
     >
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-primary-600 text-white">
+          <div className="interactive-icon flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-primary-600 text-white group-hover:scale-105">
             <Bot className="h-5 w-5" />
           </div>
           <div className="min-w-0">
@@ -74,17 +74,17 @@ export default function AgentContextBanner() {
         <button
           type="button"
           onClick={openAgentChat}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2 text-sm font-bold text-white hover:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+          className="interactive-button group inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2 text-sm font-bold text-white hover:bg-primary-700 hover:shadow-lg hover:shadow-primary-500/25"
         >
           Mở {agent.agentName}
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="interactive-icon h-4 w-4 group-hover:translate-x-0.5" />
         </button>
       </div>
 
       <div className="border-t border-primary-50 bg-primary-50/40 px-4 py-3">
         <div className="flex flex-wrap gap-2">
           {actions.map((action) => (
-            <span key={action} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-stone-700 ring-1 ring-primary-100">
+            <span key={action} className="interactive-card rounded-full bg-white px-3 py-1 text-xs font-semibold text-stone-700 ring-1 ring-primary-100 hover:-translate-y-0.5 hover:bg-primary-50 hover:text-primary-800 hover:ring-primary-200">
               {action}
             </span>
           ))}

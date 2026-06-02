@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { API_BASE_URL } from './api-base-url';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -44,8 +45,7 @@ if (!supabase) {
 export type AuthProvider = 'google' | 'microsoft';
 
 export const getOAuthRedirectUrl = (provider: AuthProvider) => {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-  return `${apiUrl}/api/auth/oauth/${provider}`;
+  return `${API_BASE_URL}/api/auth/oauth/${provider}`;
 };
 
 export const signInWithOAuth = async (provider: AuthProvider) => {

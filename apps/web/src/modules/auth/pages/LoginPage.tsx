@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card, CardHeader, CardTitle, CardContent, Button } from '../../../components/ui';
 import { ArrowLeft, CheckCircle2, KeyRound, Mail, Lock } from 'lucide-react';
-import { signInWithOAuth } from '../../../services/supabase';
+import { signInWithOAuth, supabase } from '../../../services/supabase';
 import { handleApiError, post } from '../../../services';
 import { useAuthStore } from '../../../store';
 
@@ -23,7 +23,9 @@ export default function LoginPage() {
   const login = useAuthStore((state) => state.login);
   const [isOAuthLoading, setIsOAuthLoading] = React.useState<string | null>(null);
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [mode, setMode] = React.useState<AuthMode>('login');
+  const [mode, setMode] = React.useState<AuthMode>(() =>
+    new URLSearchParams(window.location.search).get('mode') === 'reset' ? 'reset' : 'login'
+  );
   const [forgotEmail, setForgotEmail] = React.useState('');
   const [resetToken, setResetToken] = React.useState<string | null>(null);
   const [newPassword, setNewPassword] = React.useState('');
@@ -108,7 +110,7 @@ export default function LoginPage() {
 
   const handleResetPassword = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!resetToken) {
+    if (!resetToken && !supabase) {
       setFormError('Reset token is missing. Please request a new reset link.');
       return;
     }
@@ -117,10 +119,21 @@ export default function LoginPage() {
     setStatusMessage(null);
 
     try {
-      const response = await post<{ message: string }>('/api/auth/reset-password', {
-        token: resetToken,
-        password: newPassword,
-      });
+      const response = resetToken
+        ? await post<{ message: string }>('/api/auth/reset-password', {
+            token: resetToken,
+            password: newPassword,
+          })
+        : await (async () => {
+            const { data: { session }, error: sessionError } = await supabase!.auth.getSession();
+            if (sessionError) throw sessionError;
+            if (!session) throw new Error('Reset session expired. Please request a new reset link.');
+
+            const { error } = await supabase!.auth.updateUser({ password: newPassword });
+            if (error) throw error;
+            await supabase!.auth.signOut();
+            return { message: 'Password updated successfully. You can sign in now.' };
+          })();
 
       setValue('email', forgotEmail);
       setValue('password', '');

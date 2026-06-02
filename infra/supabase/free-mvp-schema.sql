@@ -53,9 +53,33 @@ create table if not exists public.profiles (
     "shareProgress": false,
     "anonymousAnalytics": true
   }',
+  app_settings jsonb not null default '{
+    "notifications": {
+      "emailNotifications": true,
+      "pushNotifications": false,
+      "weeklyDigest": true,
+      "interviewReminders": true
+    },
+    "language": "en",
+    "timezone": "auto",
+    "disconnectedProviders": []
+  }',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+add column if not exists app_settings jsonb not null default '{
+  "notifications": {
+    "emailNotifications": true,
+    "pushNotifications": false,
+    "weeklyDigest": true,
+    "interviewReminders": true
+  },
+  "language": "en",
+  "timezone": "auto",
+  "disconnectedProviders": []
+}';
 
 drop trigger if exists profiles_set_updated_at on public.profiles;
 create trigger profiles_set_updated_at
@@ -240,6 +264,54 @@ create policy "agent_memories_own"
 on public.agent_memories for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
+
+create table if not exists public.confidence_entries (
+  id text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  mood text not null check (mood in ('steady', 'uncertain', 'blocked', 'confident')),
+  win text not null default '',
+  blocker text not null default '',
+  next_step text not null default '',
+  coach_reply text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists confidence_entries_set_updated_at on public.confidence_entries;
+create trigger confidence_entries_set_updated_at
+before update on public.confidence_entries
+for each row execute function public.set_updated_at();
+
+alter table public.confidence_entries enable row level security;
+
+drop policy if exists "confidence_entries_own" on public.confidence_entries;
+create policy "confidence_entries_own"
+on public.confidence_entries for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create table if not exists public.partner_inquiries (
+  id text primary key,
+  organization_name text not null,
+  contact_person text not null,
+  email text not null,
+  phone text,
+  website text,
+  company_size text,
+  partnership_type text not null,
+  message text,
+  email_delivery text not null default 'pending'
+    check (email_delivery in ('pending', 'sent', 'skipped', 'deferred')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+drop trigger if exists partner_inquiries_set_updated_at on public.partner_inquiries;
+create trigger partner_inquiries_set_updated_at
+before update on public.partner_inquiries
+for each row execute function public.set_updated_at();
+
+alter table public.partner_inquiries enable row level security;
 
 insert into public.jobs (
   title,

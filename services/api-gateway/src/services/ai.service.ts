@@ -1520,6 +1520,9 @@ Return {"reply": string}.`,
     if (agentId === 'profile') {
       return `${prefix}Hãy chia sẻ kỹ năng hiện có, kinh nghiệm, nhu cầu hỗ trợ và kiểu môi trường làm việc bạn muốn. Tôi sẽ giúp hồ sơ đủ cụ thể để so khớp JD.`;
     }
+    if (agentId === 'confidence') {
+      return `${prefix}Hãy ghi lại một điểm tốt, một điều đang kẹt và một bước nhỏ có thể hoàn thành trong 15 phút. Nếu cần xin hỗ trợ, bạn có thể dùng mẫu: "Tôi muốn xác nhận yêu cầu này bằng văn bản để thực hiện tốt hơn."`;
+    }
     if (agentId === 'assessment') {
       return `${prefix}Bạn muốn ứng tuyển vị trí cụ thể nào? Hãy paste JD vào đây, hoặc tôi sẽ tìm JD phù hợp cho bạn. Tôi sẽ không tạo lộ trình khi chưa có JD thật và dữ liệu hồ sơ để so sánh.`;
     }

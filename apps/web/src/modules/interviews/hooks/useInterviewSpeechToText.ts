@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuthStore } from '../../../store';
+import { API_BASE_URL } from '../../../services/api-base-url';
 
 type InterviewSpeechToTextOptions = {
   getBaseText?: () => string;
@@ -7,7 +8,6 @@ type InterviewSpeechToTextOptions = {
   onTranscript: (value: string) => void;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 const MAX_RECORDING_MS = 60_000;
 const SPEECH_ERROR_MESSAGE = 'Không thể nhận diện giọng nói, vui lòng thử lại';
 const UNSUPPORTED_MESSAGE = 'Trình duyệt không hỗ trợ, vui lòng dùng Chrome hoặc Edge';

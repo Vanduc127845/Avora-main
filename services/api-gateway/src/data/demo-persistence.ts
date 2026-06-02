@@ -3,21 +3,30 @@ import path from 'node:path';
 import type { UserProfile } from '../types/shared.js';
 import {
   demoAgentMemories,
+  demoConfidenceEntries,
+  demoSettings,
+  demoPartnerInquiries,
   demoProfiles,
   demoSavedJobs,
   demoUsers,
   type DemoAgentMemory,
+  type DemoConfidenceEntry,
+  type DemoUserSettings,
+  type DemoPartnerInquiry,
   type DemoUser,
 } from './demo-store.js';
 import { logger } from '../utils/logger.js';
 
 type PersistedDemoData = {
-  version: 2;
+  version: 3;
   updatedAt: string;
   users: DemoUser[];
   profiles: UserProfile[];
   savedJobs: { userId: string; jobIds: string[] }[];
   agentMemories: DemoAgentMemory[];
+  confidenceEntries: DemoConfidenceEntry[];
+  settings: DemoUserSettings[];
+  partnerInquiries: DemoPartnerInquiry[];
 };
 
 const demoDataFile =
@@ -26,18 +35,21 @@ const demoDataFile =
 let saveQueue = Promise.resolve();
 
 const emptyDemoData = (): PersistedDemoData => ({
-  version: 2,
+  version: 3,
   updatedAt: new Date().toISOString(),
   users: [],
   profiles: [],
   savedJobs: [],
   agentMemories: [],
+  confidenceEntries: [],
+  settings: [],
+  partnerInquiries: [],
 });
 
 export async function loadDemoData(): Promise<void> {
   try {
     const raw = await readFile(demoDataFile, 'utf8');
-    const data = JSON.parse(raw) as Partial<PersistedDemoData>;
+    const data = JSON.parse(raw.replace(/^\uFEFF/, '')) as Partial<PersistedDemoData>;
 
     demoUsers.clear();
     for (const user of data.users || []) {
@@ -67,11 +79,35 @@ export async function loadDemoData(): Promise<void> {
       }
     }
 
+    demoConfidenceEntries.clear();
+    for (const entry of data.confidenceEntries || []) {
+      if (entry.id && entry.userId) {
+        demoConfidenceEntries.set(entry.id, entry);
+      }
+    }
+
+    demoSettings.clear();
+    for (const settings of data.settings || []) {
+      if (settings.userId) {
+        demoSettings.set(settings.userId, settings);
+      }
+    }
+
+    demoPartnerInquiries.clear();
+    for (const inquiry of data.partnerInquiries || []) {
+      if (inquiry.id) {
+        demoPartnerInquiries.set(inquiry.id, inquiry);
+      }
+    }
+
     logger.info('Loaded demo data store', {
       users: demoUsers.size,
       profiles: demoProfiles.size,
       savedJobs: demoSavedJobs.size,
       agentMemories: demoAgentMemories.size,
+      confidenceEntries: demoConfidenceEntries.size,
+      settings: demoSettings.size,
+      partnerInquiries: demoPartnerInquiries.size,
       file: demoDataFile,
     });
   } catch (error: any) {
@@ -92,6 +128,9 @@ export async function saveDemoData(): Promise<void> {
         jobIds: [...jobIds],
       })),
       agentMemories: [...demoAgentMemories.values()],
+      confidenceEntries: [...demoConfidenceEntries.values()],
+      settings: [...demoSettings.values()],
+      partnerInquiries: [...demoPartnerInquiries.values()],
     };
 
     await mkdir(path.dirname(demoDataFile), { recursive: true });
