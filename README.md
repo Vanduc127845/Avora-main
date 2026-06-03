@@ -207,6 +207,109 @@ http://localhost:3000
 
 For local demo mode, you can run without Supabase and without AI provider keys. Avora will use local demo auth and fallback AI.
 
+## Fresh Clone Runbook
+
+Use this checklist when someone clones `Avora-main` from GitHub on a new machine.
+
+### What GitHub includes
+
+- Source code for the web app, API gateway, shared package, docs, infra, tests, and workspace config.
+- `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `package.json`, and `.env.example`.
+- No local-only generated folders such as `node_modules`, `dist`, `.turbo`, or local `.env` secrets. Those are intentionally ignored and regenerated after install/build.
+
+### Step-by-step local run
+
+1. Install Node.js 20 LTS or newer.
+
+2. Enable the pinned pnpm version:
+
+```powershell
+corepack enable
+corepack prepare pnpm@9.15.4 --activate
+```
+
+3. Clone the repository:
+
+```bash
+git clone https://github.com/Vanduc127845/Avora-main.git
+```
+
+4. Enter the project:
+
+```bash
+cd Avora-main
+```
+
+5. Install dependencies:
+
+```bash
+pnpm install --frozen-lockfile
+```
+
+6. Create the local environment file:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+On macOS/Linux:
+
+```bash
+cp .env.example .env
+```
+
+7. Keep these zero-config demo values in `.env`:
+
+```env
+VITE_API_URL=http://localhost:4000
+VITE_ENABLE_OAUTH=false
+VITE_DASHBOARD_DATA_MODE=hybrid
+API_DATA_MODE=demo
+AI_ENABLE_DEMO_FALLBACK=true
+AUTH_PASSWORD_RESET_DRY_RUN=true
+PARTNER_INQUIRY_DRY_RUN=true
+RATE_LIMIT_STORE=memory
+```
+
+8. Start the API in terminal 1:
+
+```powershell
+pnpm --filter @ai4a/api-gateway dev
+```
+
+9. Confirm the API is alive:
+
+```powershell
+Invoke-WebRequest http://localhost:4000/health
+```
+
+10. Start the web app in terminal 2:
+
+```powershell
+pnpm --filter @ai4a/web dev
+```
+
+11. Open the local web app:
+
+```text
+http://localhost:3000
+```
+
+12. Before sharing or deploying changes, run both production builds:
+
+```powershell
+pnpm --filter @ai4a/web build
+pnpm --filter @ai4a/api-gateway build
+```
+
+### Common local fixes
+
+- If the web app says it cannot connect to the API, make sure terminal 1 is still running and `.env` has `VITE_API_URL=http://localhost:4000`.
+- If OAuth buttons are shown before Google/Microsoft providers are configured, set `VITE_ENABLE_OAUTH=false` for local demo mode.
+- If Windows has certificate errors during install, run `$env:NODE_OPTIONS='--use-system-ca'` and retry `pnpm install --frozen-lockfile`.
+- If a port is already in use, stop the other process first, then restart the API and web terminals.
+- The hosted demo can be opened at `https://avora-main-web.vercel.app`. If the Render API is asleep, wake it by opening `https://avora-main.onrender.com/health` once before presenting.
+
 ## Configuration
 
 Create one root `.env` file from `.env.example`. The local pnpm commands for the web app, API gateway, and AI service read this shared file. Keep real credentials only in `.env`; Git ignores that file.
