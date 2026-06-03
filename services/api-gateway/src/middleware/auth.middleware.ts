@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from './error.middleware.js';
-import { getOptionalSupabaseAuthClient } from '../utils/supabase.js';
+import { getOptionalSupabaseAuthClient, isDemoDataMode } from '../utils/supabase.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -18,17 +18,50 @@ declare global {
   }
 }
 
+type DecodedAuthToken = {
+  sub?: unknown;
+  userId?: unknown;
+  email?: unknown;
+};
+
+const decodeDemoAuthToken = (token: string): AuthUser | null => {
+  if (!isDemoDataMode()) return null;
+
+  const decoded = jwt.decode(token) as DecodedAuthToken | string | null;
+  if (!decoded || typeof decoded === 'string') return null;
+
+  const userId =
+    typeof decoded.userId === 'string'
+      ? decoded.userId
+      : typeof decoded.sub === 'string'
+        ? decoded.sub
+        : null;
+
+  if (!userId) return null;
+
+  return {
+    userId,
+    email: typeof decoded.email === 'string' ? decoded.email : '',
+  };
+};
+
 const verifySupabaseToken = async (token: string): Promise<AuthUser | null> => {
+  if (isDemoDataMode()) return decodeDemoAuthToken(token);
+
   const supabase = getOptionalSupabaseAuthClient();
   if (!supabase) return null;
 
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data.user) return null;
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data.user) return null;
 
-  return {
-    userId: data.user.id,
-    email: data.user.email || '',
-  };
+    return {
+      userId: data.user.id,
+      email: data.user.email || '',
+    };
+  } catch {
+    return null;
+  }
 };
 
 const verifyLocalJwt = (token: string): AuthUser => {
