@@ -14,6 +14,15 @@ API health: https://avora-main.onrender.com/health
 
 The Render free instance may spin down after inactivity. Its first request can take longer while the service starts again.
 
+For the hosted hackathon demo, keep API module data in demo mode unless the full Supabase schema has already been applied:
+
+```env
+API_DATA_MODE=demo
+CORS_ORIGIN=https://avora-main-web.vercel.app,http://localhost:3000,http://127.0.0.1:3000
+```
+
+OAuth can still use Supabase while module data falls back to the bundled demo store.
+
 ## Local verification
 
 1. Install dependencies and create the shared root environment file:
@@ -66,6 +75,7 @@ JWT_SECRET=<long-random-secret>
 CORS_ORIGIN=https://your-web-domain.com
 FRONTEND_URL=https://your-web-domain.com
 API_PUBLIC_URL=https://your-api-domain.com
+API_DATA_MODE=supabase
 AUTH_PASSWORD_RESET_DRY_RUN=false
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_KEY=<service-role-key>

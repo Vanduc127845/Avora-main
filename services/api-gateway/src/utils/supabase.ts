@@ -11,6 +11,19 @@ const hasRealEnvValue = (value?: string | null) => {
   );
 };
 
+export const isDemoDataMode = () => {
+  const value = (
+    process.env.API_DATA_MODE ||
+    process.env.DATA_MODE ||
+    process.env.DEMO_MODE ||
+    ''
+  )
+    .trim()
+    .toLowerCase();
+
+  return ['demo', 'true', '1', 'yes'].includes(value);
+};
+
 const getSupabaseUrl = () =>
   hasRealEnvValue(process.env.SUPABASE_URL) ? process.env.SUPABASE_URL!.trim() : null;
 
@@ -32,7 +45,7 @@ const createServerClient = (url: string, key: string) =>
   });
 
 export function hasSupabaseConfig(): boolean {
-  return Boolean(getSupabaseUrl() && getSupabaseServiceKey());
+  return !isDemoDataMode() && Boolean(getSupabaseUrl() && getSupabaseServiceKey());
 }
 
 export function getSupabaseAdmin(): SupabaseClient {
