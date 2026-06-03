@@ -14,7 +14,7 @@ import {
   Star,
   Users,
 } from 'lucide-react';
-import { handleApiError, post } from '../../../services';
+import { aiService, handleApiError } from '../../../services';
 import { useAuthStore } from '../../../store';
 
 type Scenario = {
@@ -162,7 +162,7 @@ export default function SimulationPage() {
     setTurns((previous) => [...previous, userTurn]);
 
     try {
-      const response = await post<{ response: string }>('/api/ai/chat', {
+      const response = await aiService.chat({
         message: `Evaluate this simulation choice and continue the scenario. Scenario: ${activeScenario.title}. Role: ${activeScenario.role}. Setup: ${activeScenario.setup}. Challenge: ${activeScenario.challenge}. User choice: ${choice}. Give specific feedback, risks, a better script if needed, and one next practice step.`,
         context: {
           agentId: 'simulation',

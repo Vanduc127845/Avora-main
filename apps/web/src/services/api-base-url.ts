@@ -1,5 +1,6 @@
 const LOCAL_API_PORT = '4000';
 const LOCAL_API_URL = `http://127.0.0.1:${LOCAL_API_PORT}`;
+const PRODUCTION_API_URL = 'https://avora-main.onrender.com';
 
 const isLocalHostname = (hostname: string) =>
   hostname === 'localhost' ||
@@ -18,7 +19,18 @@ export function resolveApiBaseUrl() {
 
   const { hostname } = window.location;
   if (!isLocalHostname(hostname)) {
-    return configuredUrl;
+    const normalizedUrl = String(configuredUrl).trim().replace(/\/$/, '');
+    const lowerUrl = normalizedUrl.toLowerCase();
+    const pointsToLocalhost =
+      lowerUrl.includes('localhost') ||
+      lowerUrl.includes('127.0.0.1') ||
+      lowerUrl.includes('0.0.0.0');
+    const isPlaceholder =
+      !normalizedUrl ||
+      lowerUrl.includes('api.example.com') ||
+      lowerUrl.includes('link-api-render-cua-ban');
+
+    return pointsToLocalhost || isPlaceholder ? PRODUCTION_API_URL : normalizedUrl;
   }
 
   if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') {

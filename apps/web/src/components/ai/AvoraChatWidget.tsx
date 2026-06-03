@@ -1,7 +1,7 @@
 import React from 'react';
 import { Loader2, MessageCircle, Mic, MicOff, Send, Sparkles, X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import { handleApiError, post } from '../../services';
+import { aiService, handleApiError } from '../../services';
 import { useAuthStore } from '../../store';
 import { getAgentForPath, type AgentId } from '../../lib/agentRegistry';
 import { useSpeechToText } from '../../hooks/useSpeechToText';
@@ -86,7 +86,7 @@ export default function AvoraChatWidget() {
     emitAgentStatus(activeAgent.id, 'thinking');
 
     try {
-      const response = await post<{ response: string }>('/api/ai/chat', {
+      const response = await aiService.chat({
         message: content,
         context: {
           agentId: activeAgent.id,

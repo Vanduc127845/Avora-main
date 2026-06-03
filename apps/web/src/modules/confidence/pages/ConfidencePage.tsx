@@ -13,9 +13,9 @@ import {
   Trash2,
 } from 'lucide-react';
 import {
+  aiService,
   confidenceService,
   handleApiError,
-  post,
   type ConfidenceEntry,
 } from '../../../services';
 import { useAuthStore } from '../../../store';
@@ -79,7 +79,7 @@ export default function ConfidencePage() {
   };
 
   const askCoach = async (message: string, extraContext?: Record<string, unknown>) => {
-    const response = await post<{ response: string }>('/api/ai/chat', {
+    const response = await aiService.chat({
       message,
       context: {
         agentId: 'confidence',
