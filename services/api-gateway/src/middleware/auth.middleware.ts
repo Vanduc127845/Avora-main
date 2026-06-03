@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppError } from './error.middleware.js';
-import { getOptionalSupabaseAdmin } from '../utils/supabase.js';
+import { getOptionalSupabaseAuthClient } from '../utils/supabase.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -19,7 +19,7 @@ declare global {
 }
 
 const verifySupabaseToken = async (token: string): Promise<AuthUser | null> => {
-  const supabase = getOptionalSupabaseAdmin();
+  const supabase = getOptionalSupabaseAuthClient();
   if (!supabase) return null;
 
   const { data, error } = await supabase.auth.getUser(token);
