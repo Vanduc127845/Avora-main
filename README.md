@@ -9,7 +9,7 @@ An AI-powered career platform that helps people with disabilities move from self
 ![Vite](https://img.shields.io/badge/vite-8-646CFF?logo=vite&logoColor=white)
 ![Status](https://img.shields.io/badge/status-submission--ready%20MVP-0ea5e9)
 
-🚀 **[Live Demo](https://avora-main-web.vercel.app/)** | 
+**Live Demo:** [avora-main-web.vercel.app](https://avora-main-web.vercel.app/) | **Video Pitch:** coming soon
 
 ## Vision
 
