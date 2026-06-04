@@ -89,6 +89,9 @@ AI_PROVIDER_MAX_RETRIES=1
 AI_PROVIDER_RETRY_BASE_MS=700
 AI_PROVIDER_RETRY_MAX_MS=2500
 DEBUG_API_REQUESTS=false
+ELEVENLABS_API_KEY=<elevenlabs-key-with-speech-to-text-access>
+SPEECH_TO_TEXT_LANGUAGE_CODE=
+SPEECH_TO_TEXT_MAX_AUDIO_BYTES=10485760
 RESEND_API_KEY=<resend-key>
 PARTNER_EMAIL_TO=partnerships@your-domain.com
 ```
@@ -199,6 +202,7 @@ Before opening to users, confirm:
 - `/health` returns `{ "status": "ok" }`.
 - `/ready` returns `status: "ok"` with Supabase, AI, and Redis checks.
 - `/api/ai/status` reports `configured: true`.
+- Mock interview microphone transcription succeeds through `/api/speech-to-text` when `ELEVENLABS_API_KEY` is configured; otherwise verify typed interview responses still submit.
 - Register, login, forgot password, and reset password work from the deployed web domain.
 - Partner inquiry form sends an email to `PARTNER_EMAIL_TO`. If `RESEND_API_KEY` is missing or delivery fails, confirm the API accepts the inquiry with `delivery: "skipped"` or `delivery: "deferred"` and the UI confirms that the team will respond within 24 hours.
 - OAuth redirect URLs in Supabase include `https://your-web-domain.com/auth/callback`. If using the API-started OAuth endpoints, also include `https://your-api-domain.com/api/auth/oauth/google/callback` and `https://your-api-domain.com/api/auth/oauth/microsoft/callback`.

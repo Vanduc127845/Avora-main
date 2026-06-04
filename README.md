@@ -271,6 +271,9 @@ PARTNER_INQUIRY_DRY_RUN=true
 RATE_LIMIT_STORE=memory
 ```
 
+Interview microphone transcription works best when the API has `ELEVENLABS_API_KEY`.
+Without that key, local/demo users can still type answers and submit them.
+
 8. Start the API in terminal 1:
 
 ```powershell
@@ -352,6 +355,16 @@ AZURE_OPENAI_API_KEY=your-key
 AZURE_OPENAI_DEPLOYMENT=your-deployment-name
 AZURE_OPENAI_API_VERSION=2024-02-15-preview
 ```
+
+### Interview speech-to-text
+
+```env
+ELEVENLABS_API_KEY=<elevenlabs-key-with-speech-to-text-access>
+SPEECH_TO_TEXT_LANGUAGE_CODE=
+SPEECH_TO_TEXT_MAX_AUDIO_BYTES=10485760
+```
+
+Leave `SPEECH_TO_TEXT_LANGUAGE_CODE` blank for auto-detect. Set it to `vi` or `en` only when you want to force one language.
 
 ### Supabase production
 

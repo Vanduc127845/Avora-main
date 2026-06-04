@@ -1,7 +1,6 @@
 import React from 'react';
 import { useAuthStore } from '../../../store';
 import { API_BASE_URL } from '../../../services/api-base-url';
-import { useSpeechToText } from '../../../hooks/useSpeechToText';
 
 type InterviewSpeechToTextOptions = {
   getBaseText?: () => string;
@@ -58,17 +57,7 @@ export function useInterviewSpeechToText({
   const [error, setError] = React.useState<string | null>(null);
   const [isListening, setIsListening] = React.useState(false);
   const [isTranscribing, setIsTranscribing] = React.useState(false);
-  const browserSpeech = useSpeechToText({
-    continuous: false,
-    getBaseText,
-    interimResults: true,
-    language: 'en-US',
-    onEnd,
-    onTranscript,
-  });
-  const [isSupported, setIsSupported] = React.useState(
-    () => browserSpeech.isSupported || canUseMediaRecorder()
-  );
+  const [isSupported, setIsSupported] = React.useState(() => canUseMediaRecorder());
 
   const clearAutoStop = React.useCallback(() => {
     if (autoStopRef.current === null) return;
@@ -116,11 +105,6 @@ export function useInterviewSpeechToText({
   );
 
   const stop = React.useCallback(() => {
-    if (browserSpeech.isListening) {
-      browserSpeech.stop();
-      return;
-    }
-
     clearAutoStop();
     const recorder = mediaRecorderRef.current;
 
@@ -130,18 +114,16 @@ export function useInterviewSpeechToText({
         recorder.stop();
       } catch {
         setIsListening(false);
-        setError(SPEECH_ERROR_MESSAGE);
+      setError(SPEECH_ERROR_MESSAGE);
       }
+      return;
     }
-  }, [browserSpeech, clearAutoStop]);
+  }, [clearAutoStop]);
 
   const start = React.useCallback(async () => {
-    if (browserSpeech.isSupported) {
-      if (browserSpeech.isListening || isListening || isTranscribing) return false;
-      setError(null);
-      browserSpeech.clearError();
-      return browserSpeech.start();
-    }
+    if (isListening || isTranscribing) return false;
+
+    setError(null);
 
     if (!canUseMediaRecorder()) {
       setIsSupported(false);
@@ -149,10 +131,7 @@ export function useInterviewSpeechToText({
       return false;
     }
 
-    if (isListening || isTranscribing) return false;
-
     setIsSupported(true);
-    setError(null);
     baseTextRef.current = getBaseText?.().trim() || '';
     chunksRef.current = [];
 
@@ -207,24 +186,23 @@ export function useInterviewSpeechToText({
       setError(SPEECH_ERROR_MESSAGE);
       return false;
     }
-  }, [browserSpeech, clearAutoStop, getBaseText, isListening, isTranscribing, onEnd, stop, transcribeAudio]);
+  }, [clearAutoStop, getBaseText, isListening, isTranscribing, onEnd, stop, transcribeAudio]);
 
   const toggle = React.useCallback(async () => {
-    if (browserSpeech.isListening || isListening) {
+    if (isListening) {
       stop();
       return false;
     }
 
     return start();
-  }, [browserSpeech.isListening, isListening, start, stop]);
+  }, [isListening, start, stop]);
 
   const clearError = React.useCallback(() => {
     setError(null);
-    browserSpeech.clearError();
-  }, [browserSpeech]);
+  }, []);
 
   React.useEffect(() => {
-    setIsSupported(browserSpeech.isSupported || canUseMediaRecorder());
+    setIsSupported(canUseMediaRecorder());
 
     return () => {
       clearAutoStop();
@@ -241,13 +219,13 @@ export function useInterviewSpeechToText({
       stopMediaStream(mediaStreamRef.current);
       mediaStreamRef.current = null;
     };
-  }, [browserSpeech.isSupported, clearAutoStop]);
+  }, [clearAutoStop]);
 
   return {
     clearError,
-    error: browserSpeech.error || error,
-    isListening: browserSpeech.isListening || isListening,
-    isSupported: browserSpeech.isSupported || isSupported,
+    error,
+    isListening,
+    isSupported,
     isTranscribing,
     start,
     stop,
