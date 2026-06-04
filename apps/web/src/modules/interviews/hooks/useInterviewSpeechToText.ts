@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuthStore } from '../../../store';
 import { API_BASE_URL } from '../../../services/api-base-url';
+import { useSpeechToText } from '../../../hooks/useSpeechToText';
 
 type InterviewSpeechToTextOptions = {
   getBaseText?: () => string;
@@ -58,6 +59,14 @@ export function useInterviewSpeechToText({
   const [isListening, setIsListening] = React.useState(false);
   const [isSupported, setIsSupported] = React.useState(() => canUseMediaRecorder());
   const [isTranscribing, setIsTranscribing] = React.useState(false);
+  const browserSpeech = useSpeechToText({
+    continuous: false,
+    getBaseText,
+    interimResults: true,
+    language: 'vi-VN',
+    onEnd,
+    onTranscript,
+  });
 
   const clearAutoStop = React.useCallback(() => {
     if (autoStopRef.current === null) return;
@@ -105,6 +114,11 @@ export function useInterviewSpeechToText({
   );
 
   const stop = React.useCallback(() => {
+    if (browserSpeech.isListening) {
+      browserSpeech.stop();
+      return;
+    }
+
     clearAutoStop();
     const recorder = mediaRecorderRef.current;
 
@@ -117,9 +131,16 @@ export function useInterviewSpeechToText({
         setError(SPEECH_ERROR_MESSAGE);
       }
     }
-  }, [clearAutoStop]);
+  }, [browserSpeech, clearAutoStop]);
 
   const start = React.useCallback(async () => {
+    if (browserSpeech.isSupported) {
+      if (browserSpeech.isListening || isListening || isTranscribing) return false;
+      setError(null);
+      browserSpeech.clearError();
+      return browserSpeech.start();
+    }
+
     if (!canUseMediaRecorder()) {
       setIsSupported(false);
       setError(UNSUPPORTED_MESSAGE);
@@ -184,20 +205,21 @@ export function useInterviewSpeechToText({
       setError(SPEECH_ERROR_MESSAGE);
       return false;
     }
-  }, [clearAutoStop, getBaseText, isListening, isTranscribing, onEnd, stop, transcribeAudio]);
+  }, [browserSpeech, clearAutoStop, getBaseText, isListening, isTranscribing, onEnd, stop, transcribeAudio]);
 
   const toggle = React.useCallback(async () => {
-    if (isListening) {
+    if (browserSpeech.isListening || isListening) {
       stop();
       return false;
     }
 
     return start();
-  }, [isListening, start, stop]);
+  }, [browserSpeech.isListening, isListening, start, stop]);
 
   const clearError = React.useCallback(() => {
     setError(null);
-  }, []);
+    browserSpeech.clearError();
+  }, [browserSpeech]);
 
   React.useEffect(() => {
     setIsSupported(canUseMediaRecorder());
@@ -221,9 +243,9 @@ export function useInterviewSpeechToText({
 
   return {
     clearError,
-    error,
-    isListening,
-    isSupported,
+    error: browserSpeech.error || error,
+    isListening: browserSpeech.isListening || isListening,
+    isSupported: browserSpeech.isSupported || isSupported,
     isTranscribing,
     start,
     stop,

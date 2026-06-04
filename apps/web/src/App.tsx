@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAccessibility } from './store/accessibility.store';
 
@@ -37,11 +37,25 @@ function PageFallback() {
 function App() {
   const { settings } = useAccessibility();
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+
+    root.style.setProperty('--font-size-scale', String(settings.fontSize));
+    root.classList.toggle('high-contrast', settings.highContrast);
+    root.classList.toggle('reduced-motion', settings.reducedMotion);
+    body.classList.toggle('high-contrast', settings.highContrast);
+    body.classList.toggle('reduced-motion', settings.reducedMotion);
+
+    return () => {
+      root.style.removeProperty('--font-size-scale');
+      root.classList.remove('high-contrast', 'reduced-motion');
+      body.classList.remove('high-contrast', 'reduced-motion');
+    };
+  }, [settings.fontSize, settings.highContrast, settings.reducedMotion]);
+
   return (
     <div
-      style={{
-        fontSize: `${settings.fontSize}%`,
-      }}
       className={`
         ${settings.highContrast ? 'high-contrast' : ''}
         ${settings.reducedMotion ? 'reduced-motion' : ''}

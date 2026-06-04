@@ -12,6 +12,59 @@ type ChatMessage = {
   content: string;
 };
 
+type GuidedPrompt = {
+  label: string;
+  prompt: string;
+};
+
+const AGENT_FLOW_PROMPTS: Partial<Record<AgentId, GuidedPrompt[]>> = {
+  dashboard: [
+    { label: 'Tóm tắt tiến độ', prompt: 'Tóm tắt tiến độ hiện tại của tôi và đề xuất 3 việc nên làm tiếp theo.' },
+    { label: 'Chọn bước tiếp theo', prompt: 'Dẫn tôi chọn hành động tiếp theo dựa trên hồ sơ, việc làm, lộ trình và phỏng vấn.' },
+    { label: 'Tìm điểm đang kẹt', prompt: 'Tìm phần đang bị kẹt trong hành trình nghề nghiệp của tôi và gợi ý cách xử lý.' },
+  ],
+  profile: [
+    { label: 'Rà soát kỹ năng', prompt: 'Rà soát hồ sơ của tôi và hỏi từng bước những kỹ năng hoặc kinh nghiệm còn thiếu.' },
+    { label: 'Nhu cầu hỗ trợ', prompt: 'Giúp tôi làm rõ nhu cầu trợ năng, phong cách làm việc và mức độ chia sẻ phù hợp.' },
+    { label: 'Hoàn thiện hồ sơ', prompt: 'Tạo checklist ngắn để tôi hoàn thiện hồ sơ trước khi ứng tuyển.' },
+  ],
+  jobs: [
+    { label: 'Flow tìm việc', prompt: 'Dẫn tôi qua flow tìm việc: chọn vai trò, phân tích JD, đánh giá phù hợp và bước tiếp theo.' },
+    { label: 'Phân tích JD', prompt: 'Phân tích một JD mẫu cho Junior Frontend Developer và chỉ ra kỹ năng còn thiếu.' },
+    { label: 'Tìm việc phù hợp', prompt: 'Gợi ý tiêu chí tìm việc remote/accessibility-friendly phù hợp với hồ sơ của tôi.' },
+  ],
+  roadmaps: [
+    { label: 'Lộ trình 4 tuần', prompt: 'Tạo flow lộ trình học 4 tuần cho Junior Frontend Developer, có bài thực hành và bằng chứng portfolio.' },
+    { label: 'Ưu tiên gap', prompt: 'Giúp tôi ưu tiên các khoảng trống kỹ năng quan trọng nhất trước khi ứng tuyển.' },
+    { label: 'Bằng chứng portfolio', prompt: 'Đề xuất 3 sản phẩm portfolio nhỏ để chứng minh kỹ năng frontend và accessibility.' },
+  ],
+  interviews: [
+    { label: 'Câu hỏi thử', prompt: 'Tạo flow luyện phỏng vấn: hỏi 3 câu cho Junior Frontend Developer rồi chấm câu trả lời của tôi.' },
+    { label: 'Cải thiện trả lời', prompt: 'Giúp tôi cải thiện một câu trả lời phỏng vấn theo cấu trúc rõ ràng và chuyên nghiệp.' },
+    { label: 'Yêu cầu hỗ trợ', prompt: 'Tạo kịch bản nói về nhu cầu hỗ trợ/trợ năng trong buổi phỏng vấn.' },
+  ],
+  confidence: [
+    { label: 'Kịch bản tự tin', prompt: 'Tạo kịch bản giúp tôi tự tin giới thiệu bản thân và nhu cầu hỗ trợ khi phỏng vấn.' },
+    { label: 'Giảm lo lắng', prompt: 'Dẫn tôi qua một bài tập ngắn để giảm lo lắng trước khi ứng tuyển.' },
+    { label: 'Tin nhắn ứng tuyển', prompt: 'Viết giúp tôi một tin nhắn ứng tuyển ngắn, chuyên nghiệp và tự tin.' },
+  ],
+  simulation: [
+    { label: 'Tình huống công việc', prompt: 'Cho tôi một tình huống công việc thực tế và các lựa chọn phản hồi phù hợp.' },
+    { label: 'Xử lý feedback', prompt: 'Mô phỏng tình huống nhận feedback khó và hướng dẫn tôi trả lời.' },
+    { label: 'Giao tiếp nhóm', prompt: 'Tạo flow luyện giao tiếp trong nhóm khi cần hỗ trợ hoặc điều chỉnh cách làm việc.' },
+  ],
+  settings: [
+    { label: 'Bật trợ năng', prompt: 'Hướng dẫn tôi bật trợ năng, tăng cỡ chữ và giảm chuyển động từng bước.' },
+    { label: 'Đổi ngôn ngữ', prompt: 'Hướng dẫn tôi đổi ngôn ngữ và kiểm tra giao diện đã áp dụng chưa.' },
+    { label: 'Quyền riêng tư', prompt: 'Giải thích các tuỳ chọn quyền riêng tư và tài khoản trong Avora.' },
+  ],
+  general: [
+    { label: 'Bắt đầu từ đâu', prompt: 'Tôi nên bắt đầu từ đâu trong Avora nếu muốn tìm việc Junior Frontend Developer?' },
+    { label: 'Giải thích tính năng', prompt: 'Giải thích nhanh các module chính của Avora và khi nào nên dùng từng module.' },
+    { label: 'Chuẩn bị demo', prompt: 'Tạo checklist demo Avora trong 2 phút cho giám khảo hoặc người đánh giá.' },
+  ],
+};
+
 export default function AvoraChatWidget() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const location = useLocation();
@@ -38,6 +91,7 @@ export default function AvoraChatWidget() {
   );
 
   const agentMessages = conversations[agent.id] || [getOpeningMessage(agent.id)];
+  const guidedPrompts = AGENT_FLOW_PROMPTS[agent.id] || AGENT_FLOW_PROMPTS.general || [];
 
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -53,7 +107,7 @@ export default function AvoraChatWidget() {
     if (!isOpen) stopSpeechInput();
   }, [isOpen, stopSpeechInput]);
 
-  if (!isAuthenticated || agent.id === 'assessment') return null;
+  if (!isAuthenticated) return null;
 
   const updateAgentMessages = (agentId: AgentId, updater: (previous: ChatMessage[]) => ChatMessage[]) => {
     setConversations((previous) => ({
@@ -66,8 +120,8 @@ export default function AvoraChatWidget() {
     window.dispatchEvent(new CustomEvent('avora:agent-status', { detail: { agentId, status } }));
   };
 
-  const sendMessage = async () => {
-    const content = input.trim();
+  const sendMessage = async (presetContent?: string) => {
+    const content = (presetContent ?? input).trim();
     if (!content || isSending) return;
 
     if (speechInput.isListening) speechInput.stop();
@@ -157,6 +211,27 @@ export default function AvoraChatWidget() {
               </div>
             ))}
 
+            {agentMessages.length <= 1 && guidedPrompts.length > 0 && (
+              <div className="rounded-2xl border border-primary-100 bg-primary-50/60 p-3">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary-700">
+                  Kịch bản nhanh
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {guidedPrompts.map((prompt) => (
+                    <button
+                      key={prompt.label}
+                      type="button"
+                      onClick={() => void sendMessage(prompt.prompt)}
+                      disabled={isSending}
+                      className="interactive-button rounded-full border border-primary-200 bg-white px-3 py-1.5 text-xs font-semibold text-primary-700 hover:border-primary-300 hover:bg-primary-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {prompt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {isSending && (
               <div className="flex items-center gap-2 text-sm text-stone-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -179,7 +254,7 @@ export default function AvoraChatWidget() {
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
-                    sendMessage();
+                    void sendMessage();
                   }
                 }}
                 placeholder={`Hỏi ${agent.agentName}...`}
@@ -209,7 +284,7 @@ export default function AvoraChatWidget() {
               </button>
               <button
                 type="button"
-                onClick={sendMessage}
+                onClick={() => void sendMessage()}
                 disabled={isSending || !input.trim()}
                 className="interactive-button flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-white hover:bg-primary-700 hover:shadow-lg hover:shadow-primary-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label={`Gửi tin nhắn cho ${agent.agentName}`}

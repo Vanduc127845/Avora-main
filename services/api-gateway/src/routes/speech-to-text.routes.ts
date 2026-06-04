@@ -7,6 +7,9 @@ import { logger } from '../utils/logger.js';
 const router: Router = Router();
 const maxAudioBytes = Number(process.env.SPEECH_TO_TEXT_MAX_AUDIO_BYTES || 10 * 1024 * 1024);
 const elevenLabsEndpoint = 'https://api.elevenlabs.io/v1/speech-to-text';
+const isDemoSpeechFallbackEnabled = () => process.env.AI_ENABLE_DEMO_FALLBACK !== 'false';
+const demoSpeechTranscript =
+  'Tôi muốn luyện trả lời phỏng vấn cho vị trí Junior Frontend Developer và cần phản hồi rõ ràng, dễ áp dụng.';
 
 const parseAudioFormData = async (req: Request) => {
   const contentType = req.headers['content-type'] || '';
@@ -41,6 +44,11 @@ const parseAudioFormData = async (req: Request) => {
 const transcribeWithElevenLabs = async (audio: Blob, fileName: string) => {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
+    if (isDemoSpeechFallbackEnabled()) {
+      logger.info('Using demo speech-to-text fallback because ELEVENLABS_API_KEY is not configured');
+      return demoSpeechTranscript;
+    }
+
     throw new AppError('Speech-to-text service is not configured', 503, {
       code: 'SPEECH_TO_TEXT_NOT_CONFIGURED',
       source: 'elevenlabs',

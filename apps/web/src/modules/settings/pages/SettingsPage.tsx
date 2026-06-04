@@ -17,11 +17,24 @@ import {
   type UserSettings,
 } from '../../../services';
 import { supabase } from '../../../services/supabase';
+import i18n from '../../../i18n';
 
 const fadeUp = {
   initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] }
+};
+
+type SupportedLanguage = 'en' | 'vi';
+
+const normalizeLanguage = (language?: string): SupportedLanguage => (
+  language === 'vi' ? 'vi' : 'en'
+);
+
+const applyLanguage = (language: SupportedLanguage) => {
+  void i18n.changeLanguage(language);
+  document.documentElement.lang = language;
+  localStorage.setItem('i18nextLng', language);
 };
 
 // Toggle switch component
@@ -163,7 +176,12 @@ export default function SettingsPage() {
 
         const settingsResponse = await settingsService.get();
         if (!isMounted) return;
-        setAppSettings(settingsResponse.settings);
+        const nextSettings = {
+          ...settingsResponse.settings,
+          language: normalizeLanguage(settingsResponse.settings.language),
+        };
+        applyLanguage(nextSettings.language);
+        setAppSettings(nextSettings);
       } catch (error) {
         const apiError = handleApiError(error);
         console.warn('Unable to load profile from API:', apiError.error);
@@ -283,6 +301,16 @@ export default function SettingsPage() {
       setNewPassword('');
       setConfirmPassword('');
     }
+  };
+
+  const handleChangeLanguage = async (language: string) => {
+    const nextLanguage = normalizeLanguage(language);
+    applyLanguage(nextLanguage);
+    setAppSettings((previous) => ({
+      ...previous,
+      language: nextLanguage,
+    }));
+    await handleSaveSettings({ language: nextLanguage });
   };
 
   const handleDisconnectGoogle = async () => {
@@ -635,14 +663,15 @@ export default function SettingsPage() {
                     <select
                       id="language"
                       className="input"
-                      value={appSettings.language}
-                      onChange={(event) => handleSaveSettings({ language: event.target.value })}
+                      value={normalizeLanguage(appSettings.language)}
+                      onChange={(event) => void handleChangeLanguage(event.target.value)}
                     >
                       <option value="en">English</option>
                       <option value="vi">Tiếng Việt</option>
-                      <option value="es">Español</option>
-                      <option value="fr">Français</option>
                     </select>
+                    <p className="text-xs text-stone-500">
+                      Language changes apply immediately. This demo currently ships English and Vietnamese UI resources.
+                    </p>
                   </div>
 
                   <div className="space-y-2">
