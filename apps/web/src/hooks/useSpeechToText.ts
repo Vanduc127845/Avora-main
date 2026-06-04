@@ -49,6 +49,7 @@ declare global {
 
 type SpeechToTextOptions = {
   continuous?: boolean;
+  fallbackTranscript?: string | (() => string);
   getBaseText?: () => string;
   interimResults?: boolean;
   language?: string;
@@ -81,6 +82,7 @@ const speechErrorMessage = (code: string) => {
 
 export function useSpeechToText({
   continuous = true,
+  fallbackTranscript,
   getBaseText,
   interimResults = true,
   language = 'vi-VN',
@@ -94,6 +96,21 @@ export function useSpeechToText({
   const [interimTranscript, setInterimTranscript] = React.useState('');
   const [isListening, setIsListening] = React.useState(false);
   const [isSupported, setIsSupported] = React.useState(() => Boolean(getSpeechRecognitionConstructor()));
+
+  const applyFallbackTranscript = React.useCallback(() => {
+    const fallback =
+      typeof fallbackTranscript === 'function'
+        ? fallbackTranscript()
+        : fallbackTranscript;
+    const nextTranscript = fallback?.trim();
+
+    if (!nextTranscript) return false;
+
+    onTranscript(joinTranscript(baseTextRef.current, nextTranscript));
+    setInterimTranscript('');
+    setError(null);
+    return true;
+  }, [fallbackTranscript, onTranscript]);
 
   React.useEffect(() => {
     setIsSupported(Boolean(getSpeechRecognitionConstructor()));
@@ -157,6 +174,10 @@ export function useSpeechToText({
     };
 
     recognition.onerror = (event) => {
+      if (['no-speech', 'audio-capture', 'network'].includes(event.error) && applyFallbackTranscript()) {
+        return;
+      }
+
       setError(speechErrorMessage(event.error));
     };
 
@@ -191,7 +212,7 @@ export function useSpeechToText({
       setIsListening(false);
       return false;
     }
-  }, [continuous, getBaseText, interimResults, language, onEnd, onTranscript]);
+  }, [applyFallbackTranscript, continuous, getBaseText, interimResults, language, onEnd, onTranscript]);
 
   const toggle = React.useCallback(() => {
     if (isListening) {
