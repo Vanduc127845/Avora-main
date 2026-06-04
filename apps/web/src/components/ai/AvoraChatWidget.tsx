@@ -76,7 +76,6 @@ export default function AvoraChatWidget() {
   const [error, setError] = React.useState<string | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const speechInput = useSpeechToText({
-    fallbackTranscript: () => `Tôi muốn ${agent.agentName} hướng dẫn tôi theo từng bước.`,
     getBaseText: () => input,
     onTranscript: setInput,
   });

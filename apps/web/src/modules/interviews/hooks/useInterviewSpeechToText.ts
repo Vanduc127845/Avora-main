@@ -57,16 +57,18 @@ export function useInterviewSpeechToText({
   const autoStopRef = React.useRef<number | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [isListening, setIsListening] = React.useState(false);
-  const [isSupported, setIsSupported] = React.useState(() => canUseMediaRecorder());
   const [isTranscribing, setIsTranscribing] = React.useState(false);
   const browserSpeech = useSpeechToText({
     continuous: false,
     getBaseText,
     interimResults: true,
-    language: 'vi-VN',
+    language: 'en-US',
     onEnd,
     onTranscript,
   });
+  const [isSupported, setIsSupported] = React.useState(
+    () => browserSpeech.isSupported || canUseMediaRecorder()
+  );
 
   const clearAutoStop = React.useCallback(() => {
     if (autoStopRef.current === null) return;
@@ -134,14 +136,14 @@ export function useInterviewSpeechToText({
   }, [browserSpeech, clearAutoStop]);
 
   const start = React.useCallback(async () => {
-    if (!canUseMediaRecorder()) {
-      if (browserSpeech.isSupported) {
-        if (browserSpeech.isListening || isListening || isTranscribing) return false;
-        setError(null);
-        browserSpeech.clearError();
-        return browserSpeech.start();
-      }
+    if (browserSpeech.isSupported) {
+      if (browserSpeech.isListening || isListening || isTranscribing) return false;
+      setError(null);
+      browserSpeech.clearError();
+      return browserSpeech.start();
+    }
 
+    if (!canUseMediaRecorder()) {
       setIsSupported(false);
       setError(UNSUPPORTED_MESSAGE);
       return false;
@@ -222,7 +224,7 @@ export function useInterviewSpeechToText({
   }, [browserSpeech]);
 
   React.useEffect(() => {
-    setIsSupported(canUseMediaRecorder());
+    setIsSupported(browserSpeech.isSupported || canUseMediaRecorder());
 
     return () => {
       clearAutoStop();
@@ -239,7 +241,7 @@ export function useInterviewSpeechToText({
       stopMediaStream(mediaStreamRef.current);
       mediaStreamRef.current = null;
     };
-  }, [clearAutoStop]);
+  }, [browserSpeech.isSupported, clearAutoStop]);
 
   return {
     clearError,
