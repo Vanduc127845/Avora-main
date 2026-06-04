@@ -7,6 +7,7 @@ import { logger } from '../utils/logger.js';
 const router: Router = Router();
 const maxAudioBytes = Number(process.env.SPEECH_TO_TEXT_MAX_AUDIO_BYTES || 10 * 1024 * 1024);
 const elevenLabsEndpoint = 'https://api.elevenlabs.io/v1/speech-to-text';
+const speechToTextLanguageCode = process.env.SPEECH_TO_TEXT_LANGUAGE_CODE?.trim();
 const isDemoSpeechFallbackEnabled = () => process.env.AI_ENABLE_DEMO_FALLBACK !== 'false';
 const demoSpeechTranscript =
   'Tôi muốn luyện trả lời phỏng vấn cho vị trí Junior Frontend Developer và cần phản hồi rõ ràng, dễ áp dụng.';
@@ -57,7 +58,9 @@ const transcribeWithElevenLabs = async (audio: Blob, fileName: string) => {
 
   const formData = new FormData();
   formData.append('model_id', 'scribe_v1');
-  formData.append('language_code', 'vie');
+  if (speechToTextLanguageCode) {
+    formData.append('language_code', speechToTextLanguageCode);
+  }
   formData.append('file', audio, fileName);
 
   const response = await fetch(elevenLabsEndpoint, {

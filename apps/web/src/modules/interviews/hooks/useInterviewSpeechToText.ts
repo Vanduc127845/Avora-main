@@ -4,7 +4,6 @@ import { API_BASE_URL } from '../../../services/api-base-url';
 import { useSpeechToText } from '../../../hooks/useSpeechToText';
 
 type InterviewSpeechToTextOptions = {
-  fallbackTranscript?: string | (() => string);
   getBaseText?: () => string;
   onEnd?: () => void;
   onTranscript: (value: string) => void;
@@ -47,7 +46,6 @@ const stopMediaStream = (stream: MediaStream | null) => {
 };
 
 export function useInterviewSpeechToText({
-  fallbackTranscript,
   getBaseText,
   onEnd,
   onTranscript,
@@ -63,32 +61,12 @@ export function useInterviewSpeechToText({
   const [isTranscribing, setIsTranscribing] = React.useState(false);
   const browserSpeech = useSpeechToText({
     continuous: false,
-    fallbackTranscript,
     getBaseText,
     interimResults: true,
     language: 'vi-VN',
     onEnd,
     onTranscript,
   });
-
-  const getFallbackTranscript = React.useCallback(() => {
-    const fallback =
-      typeof fallbackTranscript === 'function'
-        ? fallbackTranscript()
-        : fallbackTranscript;
-
-    return fallback?.trim() || '';
-  }, [fallbackTranscript]);
-
-  const applyFallbackTranscript = React.useCallback(() => {
-    const fallback = getFallbackTranscript();
-
-    if (!fallback) return false;
-
-    onTranscript(joinTranscript(baseTextRef.current, fallback));
-    setError(null);
-    return true;
-  }, [getFallbackTranscript, onTranscript]);
 
   const clearAutoStop = React.useCallback(() => {
     if (autoStopRef.current === null) return;
@@ -99,7 +77,6 @@ export function useInterviewSpeechToText({
   const transcribeAudio = React.useCallback(
     async (audioBlob: Blob, mimeType: string) => {
       if (audioBlob.size < 200) {
-        if (applyFallbackTranscript()) return;
         setError(SPEECH_ERROR_MESSAGE);
         return;
       }
@@ -128,13 +105,12 @@ export function useInterviewSpeechToText({
 
         onTranscript(joinTranscript(baseTextRef.current, transcript));
       } catch {
-        if (applyFallbackTranscript()) return;
         setError(SPEECH_ERROR_MESSAGE);
       } finally {
         setIsTranscribing(false);
       }
     },
-    [applyFallbackTranscript, onTranscript]
+    [onTranscript]
   );
 
   const stop = React.useCallback(() => {
@@ -158,14 +134,14 @@ export function useInterviewSpeechToText({
   }, [browserSpeech, clearAutoStop]);
 
   const start = React.useCallback(async () => {
-    if (browserSpeech.isSupported) {
-      if (browserSpeech.isListening || isListening || isTranscribing) return false;
-      setError(null);
-      browserSpeech.clearError();
-      return browserSpeech.start();
-    }
-
     if (!canUseMediaRecorder()) {
+      if (browserSpeech.isSupported) {
+        if (browserSpeech.isListening || isListening || isTranscribing) return false;
+        setError(null);
+        browserSpeech.clearError();
+        return browserSpeech.start();
+      }
+
       setIsSupported(false);
       setError(UNSUPPORTED_MESSAGE);
       return false;

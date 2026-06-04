@@ -20,15 +20,8 @@ export default function InterviewSessionPage() {
   const [error, setError] = React.useState<string | null>(null);
   const currentQuestion = interview?.questions[interview.currentQuestionIndex];
   const getResponseBaseText = React.useCallback(() => response, [response]);
-  const getSpeechFallbackResponse = React.useCallback(() => {
-    const question = currentQuestion?.interviewerPrompt || currentQuestion?.text;
-    return question
-      ? `I would answer this by describing a relevant project, the specific action I took, and the result. For this question, I would connect my React and accessibility work to the role and explain what I learned.`
-      : 'I would answer by sharing a concrete example, the action I took, and the result.';
-  }, [currentQuestion?.interviewerPrompt, currentQuestion?.text]);
   const handleSpeechEnd = React.useCallback(() => setIsRecording(false), []);
   const speechAnswer = useInterviewSpeechToText({
-    fallbackTranscript: getSpeechFallbackResponse,
     getBaseText: getResponseBaseText,
     onEnd: handleSpeechEnd,
     onTranscript: setResponse,
