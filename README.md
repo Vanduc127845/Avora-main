@@ -56,6 +56,7 @@ flowchart TD
   end
 
   subgraph AI
+    Groq[Groq / Llama 3.3 70B]
     OpenAI[OpenAI]
     AzureOpenAI[Azure OpenAI]
     Fallback[Deterministic Demo Fallback]
@@ -73,6 +74,7 @@ flowchart TD
   Auth --> Supabase
   Users --> Supabase
   Jobs --> Supabase
+  Assessment --> Groq
   Assessment --> OpenAI
   Assessment --> AzureOpenAI
   Assessment --> Fallback
@@ -86,7 +88,7 @@ This repository is a submission-ready local MVP. The core web product runs end t
 - Email register, login, forgot password, and reset password.
 - Local demo persistence for users, profiles, saved jobs, and agent memory.
 - Supabase production schema and service-role backend integration.
-- AI provider support for OpenAI and Azure OpenAI.
+- AI provider support for Groq (Llama 3.3 70B), OpenAI, and Azure OpenAI with automatic fallback.
 - Demo fallback mode when real AI keys are not configured.
 - Career assessment, job analysis, roadmaps, mock interviews, confidence coaching, and partner inquiry handling.
 - Browser accessibility smoke coverage for desktop and mobile pages.
@@ -108,7 +110,7 @@ The hosted hackathon demo is available at [avora-main-web.vercel.app](https://av
 - Runtime: Node.js 20
 - Framework: Express.js + TypeScript
 - Auth: Supabase Auth in production, local JWT demo fallback
-- AI: OpenAI, Azure OpenAI, deterministic local fallback
+- AI: Groq (Llama 3.3 70B), OpenAI, Azure OpenAI, deterministic local fallback
 - Email: Resend for partner inquiries
 - Rate limiting: memory or Redis-backed express-rate-limit
 
@@ -637,6 +639,58 @@ POST /api/partner-inquiry
 ```
 
 </details>
+
+## Deployment Guide
+
+### 1 — Deploy the API to Render
+
+1. Go to [render.com](https://render.com) → **New Web Service** → connect `Avora-main` repo.
+2. Render detects `render.yaml` automatically and pre-fills all settings.
+3. In the Render dashboard **Environment** tab, set the following secrets manually:
+
+| Variable | Value |
+|---|---|
+| `AI_PROVIDER` | `groq` |
+| `GROQ_API_KEY` | your key from [console.groq.com/keys](https://console.groq.com/keys) |
+| `CORS_ORIGIN` | `https://avora-main-web.vercel.app` (your Vercel URL) |
+| `JWT_SECRET` | any long random string |
+| `SUPABASE_URL` | your Supabase project URL (optional – leave blank for demo mode) |
+| `SUPABASE_SERVICE_KEY` | your Supabase service role key (optional) |
+| `ELEVENLABS_API_KEY` | your ElevenLabs key (optional, for mic transcription) |
+
+4. Click **Deploy**. The health check at `/health` will confirm the API is running.
+
+### 2 — Deploy the Frontend to Vercel
+
+1. Go to [vercel.com](https://vercel.com) → **Add Project** → import `Avora-main`.
+2. Vercel detects `vercel.json` and sets the correct build/output automatically.
+3. In the Vercel **Settings → Environment Variables** tab add:
+
+| Variable | Value |
+|---|---|
+| `VITE_API_URL` | your Render API URL, e.g. `https://avora-api.onrender.com` |
+| `VITE_APP_NAME` | `Avora` |
+| `VITE_ENABLE_OAUTH` | `false` (set `true` only after Supabase OAuth is configured) |
+| `VITE_DASHBOARD_DATA_MODE` | `hybrid` |
+| `VITE_SUPABASE_URL` | your Supabase project URL (optional) |
+| `VITE_SUPABASE_ANON_KEY` | your Supabase anon key (optional) |
+
+4. Click **Deploy**. Visit the preview URL to verify the app loads and can reach the API.
+
+### 3 — Verify deployment
+
+```bash
+# API health
+curl https://avora-api.onrender.com/health
+
+# AI provider status
+curl https://avora-api.onrender.com/api/ai/status
+
+# Readiness (checks AI + DB + rate limit store)
+curl https://avora-api.onrender.com/ready
+```
+
+---
 
 ## Production Checklist
 

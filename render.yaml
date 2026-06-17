@@ -1,0 +1,68 @@
+services:
+  - type: web
+    name: avora-api
+    runtime: node
+    region: singapore
+    plan: free
+    rootDir: services/api-gateway
+    buildCommand: cd ../.. && corepack enable && pnpm install --frozen-lockfile && pnpm --filter @ai4a/shared build && pnpm --filter @ai4a/api-gateway build
+    startCommand: node dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      - key: LOG_LEVEL
+        value: info
+      - key: RATE_LIMIT_STORE
+        value: memory
+      - key: API_DATA_MODE
+        value: demo
+      - key: AUTH_PASSWORD_RESET_DRY_RUN
+        value: "false"
+      - key: PARTNER_INQUIRY_DRY_RUN
+        value: "false"
+      - key: DEMO_DATA_FILE
+        value: ./data/demo-db.json
+
+      # --- AI Provider (Groq) ---
+      # Set these in the Render dashboard → Environment
+      - key: AI_PROVIDER
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: GROQ_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: AI_ENABLE_DEMO_FALLBACK
+        value: "true"
+      - key: AI_PROVIDER_MAX_RETRIES
+        value: "2"
+      - key: AI_PROVIDER_RETRY_BASE_MS
+        value: "700"
+      - key: AI_PROVIDER_RETRY_MAX_MS
+        value: "2500"
+
+      # --- Auth ---
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false  # Set to your Vercel frontend URL, e.g. https://avora-main-web.vercel.app
+
+      # --- Supabase (optional – leave blank for demo mode) ---
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+
+      # --- Speech-to-text (optional) ---
+      - key: ELEVENLABS_API_KEY
+        sync: false
+
+      # --- Email (optional) ---
+      - key: RESEND_API_KEY
+        sync: false
+      - key: PARTNER_EMAIL_TO
+        sync: false
