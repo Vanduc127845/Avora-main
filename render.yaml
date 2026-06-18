@@ -16,7 +16,7 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: RATE_LIMIT_STORE
-        value: memory
+        value: redis
       - key: API_DATA_MODE
         value: demo
       - key: AUTH_PASSWORD_RESET_DRY_RUN
@@ -51,18 +51,22 @@ services:
       - key: CORS_ORIGIN
         sync: false  # Set to your Vercel frontend URL, e.g. https://avora-main-web.vercel.app
 
-      # --- Supabase (optional – leave blank for demo mode) ---
+      # --- Upstash Redis (rate limiting) ---
+      - key: REDIS_URL
+        sync: false  # Set to Upstash Redis URL: rediss://:password@host:6380
+
+      # --- Supabase (Google/Microsoft login) ---
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_KEY
         sync: false
 
-      # --- Speech-to-text (optional) ---
+      # --- Speech-to-text ---
       - key: ELEVENLABS_API_KEY
         sync: false
 
-      # --- Email (optional) ---
+      # --- Email (Resend) ---
       - key: RESEND_API_KEY
-        sync: false
+        sync: false  # Set to your Resend API key: re_xxxxx
       - key: PARTNER_EMAIL_TO
-        sync: false
+        value: phan06348@gmail.com
