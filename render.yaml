@@ -57,9 +57,9 @@ services:
 
       # --- Supabase (Google/Microsoft login) ---
       - key: SUPABASE_URL
-        sync: false
+        value: https://hquyyfqmdifhoevhdhlb.supabase.co
       - key: SUPABASE_SERVICE_KEY
-        sync: false
+        sync: false  # Set this in Render dashboard → Environment (secret key from Supabase)
 
       # --- Speech-to-text ---
       - key: ELEVENLABS_API_KEY
