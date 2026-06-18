@@ -27,9 +27,17 @@ const PartnersPage = lazy(() => import('./modules/partners/pages/PartnersPage'))
 
 function PageFallback() {
   return (
-    <div className="flex min-h-[320px] items-center justify-center px-6 py-12" role="status" aria-live="polite">
-      <div className="h-10 w-10 animate-spin rounded-full border-2 border-stone-200 border-t-primary-500" />
-      <span className="sr-only">Loading page</span>
+    <div className="animate-pulse px-6 py-6" role="status" aria-live="polite">
+      <div className="mb-4 h-7 w-40 rounded-lg bg-stone-200" />
+      <div className="mb-2 h-4 w-full rounded-lg bg-stone-100" />
+      <div className="mb-6 h-4 w-2/3 rounded-lg bg-stone-100" />
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-24 rounded-xl bg-stone-100" />
+        ))}
+      </div>
+      <div className="h-48 rounded-xl bg-stone-100" />
+      <span className="sr-only">Đang tải...</span>
     </div>
   );
 }

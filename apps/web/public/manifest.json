@@ -1,0 +1,34 @@
+{
+  "name": "Avora - Trợ lý AI Nghề nghiệp",
+  "short_name": "Avora",
+  "description": "Trợ lý AI đồng hành cùng người khuyết tật trong hành trình nghề nghiệp",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0ea5e9",
+  "orientation": "portrait-primary",
+  "lang": "vi",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "Tổng quan tiến độ"
+    },
+    {
+      "name": "Phỏng vấn",
+      "url": "/interviews",
+      "description": "Luyện tập phỏng vấn AI"
+    }
+  ]
+}

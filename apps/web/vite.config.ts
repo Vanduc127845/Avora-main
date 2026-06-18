@@ -32,9 +32,6 @@ export default defineConfig(() => {
           assetFileNames: 'assets/[name]-[hash][extname]',
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('react-native') || id.includes('expo')) {
-                return 'native-compat';
-              }
               if (id.includes('lucide-react')) {
                 return 'icons';
               }
