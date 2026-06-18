@@ -53,7 +53,7 @@ services:
 
       # --- Upstash Redis (rate limiting) ---
       - key: REDIS_URL
-        sync: false  # Set to Upstash Redis URL: rediss://:password@host:6380
+        sync: false  # Set to your Upstash Redis URL (rediss://default:...@....upstash.io:6379)
 
       # --- Supabase (Google/Microsoft login) ---
       - key: SUPABASE_URL
