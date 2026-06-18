@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   ArrowRight, Sparkles, Shield,
   Eye, Cpu, Star, Zap,
   GraduationCap, MessageCircle,
   TrendingUp, Heart, Globe, ExternalLink, Moon, Sun,
-  Brain, FileText, Target, Bell, User
+  Brain, FileText, Target, Bell, User, Menu, X
 } from 'lucide-react';
 import { Button } from '../../../components/ui';
 import { IMAGES } from '../../../utils/images';
@@ -371,42 +371,42 @@ const impactStats = [
 ];
 
 const journeySteps = [
-  { step: 1, title: 'Discover Your Strengths', desc: 'Chat with our AI to understand your strengths, skills, and what matters most to you in a career.', icon: Sparkles },
-  { step: 2, title: 'Explore Accessible Careers', desc: 'Browse careers matched to your abilities with detailed accessibility insights for each role.', icon: Globe },
-  { step: 3, title: 'Prepare with Confidence', desc: 'Build skills with personalized roadmaps and practice interviews until you feel ready.', icon: GraduationCap },
-  { step: 4, title: 'Apply & Succeed', desc: 'Get matched with inclusive employers and track your applications with confidence.', icon: TrendingUp },
+  { step: 1, title: 'Khám phá điểm mạnh', desc: 'Trò chuyện với AI để hiểu rõ điểm mạnh, kỹ năng và điều bạn muốn nhất trong sự nghiệp.', icon: Sparkles },
+  { step: 2, title: 'Tìm nghề nghiệp phù hợp', desc: 'Khám phá các nghề phù hợp với khả năng của bạn kèm thông tin tiếp cận chi tiết cho từng vị trí.', icon: Globe },
+  { step: 3, title: 'Chuẩn bị tự tin', desc: 'Xây dựng kỹ năng theo lộ trình cá nhân hóa và luyện phỏng vấn AI cho đến khi bạn sẵn sàng.', icon: GraduationCap },
+  { step: 4, title: 'Ứng tuyển và thành công', desc: 'Kết nối với nhà tuyển dụng thân thiện và theo dõi tiến trình ứng tuyển của bạn.', icon: TrendingUp },
 ];
 
 const values = [
-  { icon: Sparkles, title: 'AI-Powered Guidance', desc: 'Our intelligent system adapts to your pace and learning style, providing personalized recommendations.', color: '#0ea5e9' },
-  { icon: Shield, title: 'Privacy by Design', desc: 'Your data is encrypted and protected. We follow GDPR, CCPA, and international data protection standards.', color: '#10b981' },
-  { icon: MessageCircle, title: '24/7 Support', desc: 'Access help whenever you need it. Our support team understands accessibility needs.', color: '#f59e0b' },
-  { icon: Heart, title: 'Continuous Learning', desc: 'Track your progress with clear milestones. Celebrate every achievement on your journey.', color: '#ec4899' },
+  { icon: Sparkles, title: 'Hướng dẫn bằng AI', desc: 'Hệ thống AI thích nghi với tốc độ và phong cách học của bạn, đưa ra gợi ý cá nhân hóa.', color: '#0ea5e9' },
+  { icon: Shield, title: 'Bảo mật thông tin', desc: 'Dữ liệu của bạn được mã hóa và bảo vệ theo tiêu chuẩn quốc tế về bảo mật dữ liệu.', color: '#10b981' },
+  { icon: MessageCircle, title: 'Hỗ trợ 24/7', desc: 'Nhận trợ giúp bất cứ lúc nào bạn cần. Đội ngũ hỗ trợ hiểu rõ nhu cầu tiếp cận đặc biệt.', color: '#f59e0b' },
+  { icon: Heart, title: 'Học tập liên tục', desc: 'Theo dõi tiến độ với các mốc rõ ràng. Ghi nhận từng thành tích trên hành trình của bạn.', color: '#ec4899' },
 ];
 
 const keyFeatures = [
-  { 
-    icon: Brain, 
-    title: 'AI-Powered Matching', 
-    desc: 'Intelligent algorithms match your unique skills and preferences with the perfect career opportunities.',
+  {
+    icon: Brain,
+    title: 'Kết nối AI thông minh',
+    desc: 'Thuật toán AI kết hợp kỹ năng và sở thích của bạn với những cơ hội nghề nghiệp phù hợp nhất.',
     color: '#0ea5e9'
   },
-  { 
-    icon: FileText, 
-    title: 'Smart Resume Parser', 
-    desc: 'Automatically extract and analyze candidate information from resumes for comprehensive profiles.',
+  {
+    icon: FileText,
+    title: 'Phân tích hồ sơ tự động',
+    desc: 'Tự động trích xuất và phân tích thông tin từ hồ sơ để xây dựng profile nghề nghiệp toàn diện.',
     color: '#10b981'
   },
-  { 
-    icon: Target, 
-    title: 'Skill Gap Analyzer', 
-    desc: 'Identify gaps between your current skills and target roles, with personalized learning paths.',
+  {
+    icon: Target,
+    title: 'Phân tích kỹ năng còn thiếu',
+    desc: 'Xác định khoảng cách giữa kỹ năng hiện tại và vị trí mục tiêu, kèm lộ trình học cá nhân hóa.',
     color: '#f59e0b'
   },
-  { 
-    icon: Bell, 
-    title: 'Real-time Notifications', 
-    desc: 'Stay updated with instant alerts for new opportunities that match your profile.',
+  {
+    icon: Bell,
+    title: 'Thông báo tức thì',
+    desc: 'Cập nhật ngay lập tức về các cơ hội mới phù hợp với hồ sơ và tiêu chí của bạn.',
     color: '#8b5cf6'
   },
 ];
@@ -468,6 +468,7 @@ const testimonials = [
 
 export default function HomePage() {
   const [theme, setTheme] = useState<Theme>('dark');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isDark = theme === 'dark';
 
   return (
@@ -495,13 +496,13 @@ export default function HomePage() {
               <Link to="/docs" className={`px-4 py-2 text-sm font-medium transition-colors rounded-lg ${isDark ? 'text-zinc-300 hover:text-sky-400 hover:bg-zinc-800' : 'text-stone-600 hover:text-sky-600 hover:bg-stone-100'}`}>
                 Tài liệu
               </Link>
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors rounded-lg ${isDark ? 'text-zinc-300 hover:text-sky-400 hover:bg-zinc-800' : 'text-stone-600 hover:text-sky-600 hover:bg-stone-100'}`}>
+              <a href="https://github.com/Vanduc127845/Avora-main" target="_blank" rel="noopener noreferrer" className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors rounded-lg ${isDark ? 'text-zinc-300 hover:text-sky-400 hover:bg-zinc-800' : 'text-stone-600 hover:text-sky-600 hover:bg-stone-100'}`}>
                 GitHub
                 <ExternalLink className="w-3 h-3 opacity-50" />
               </a>
             </nav>
 
-            {/* Right side - Theme toggle + Login/Signup */}
+            {/* Right side - Theme toggle + Login + Register */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setTheme(isDark ? 'light' : 'dark')}
@@ -510,15 +511,48 @@ export default function HomePage() {
               >
                 {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
-              <Link to="/login">
-                <Button size="sm" className="bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20 hover:shadow-xl hover:shadow-sky-500/30">
-                  Đăng nhập
-                </Button>
-              </Link>
+              <div className="hidden sm:flex items-center gap-2">
+                <Link to="/login">
+                  <Button size="sm" variant="outline" className={`border transition-colors ${isDark ? 'border-zinc-700 text-zinc-300 hover:bg-zinc-800' : 'border-stone-200 text-stone-600 hover:bg-stone-100'}`}>
+                    Đăng nhập
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button size="sm" className="bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20">
+                    Đăng ký miễn phí
+                  </Button>
+                </Link>
+              </div>
+              {/* Mobile hamburger */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className={`sm:hidden p-2 rounded-lg transition-colors ${isDark ? 'text-zinc-400 hover:bg-zinc-800' : 'text-stone-500 hover:bg-stone-100'}`}
+                aria-label="Toggle menu"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
             </div>
           </div>
         </div>
       </header>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className={`sm:hidden sticky top-16 z-40 border-b shadow-lg ${isDark ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-stone-200'}`}>
+          <div className="px-6 py-4 flex flex-col gap-3">
+            <Link to="/docs" onClick={() => setMobileMenuOpen(false)} className={`text-sm font-medium py-2 ${isDark ? 'text-zinc-300' : 'text-stone-600'}`}>Tài liệu</Link>
+            <a href="https://github.com/Vanduc127845/Avora-main" target="_blank" rel="noopener noreferrer" className={`text-sm font-medium py-2 flex items-center gap-1 ${isDark ? 'text-zinc-300' : 'text-stone-600'}`}>GitHub <ExternalLink className="w-3 h-3" /></a>
+            <div className="flex flex-col gap-2 pt-2 border-t border-zinc-800">
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                <Button variant="outline" className={`w-full ${isDark ? 'border-zinc-700 text-zinc-300' : 'border-stone-200 text-stone-700'}`}>Đăng nhập</Button>
+              </Link>
+              <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
+                <Button className="w-full bg-sky-500 hover:bg-sky-600 text-white">Đăng ký miễn phí</Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <motion.section className={`relative pt-12 pb-20 lg:pt-16 lg:pb-28 overflow-hidden transition-colors duration-200 ${isDark ? 'bg-zinc-950' : 'bg-stone-50'}`}>
@@ -615,13 +649,13 @@ export default function HomePage() {
             <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-12">
               <span className={`inline-flex items-center gap-2 text-sm font-semibold tracking-wider uppercase mb-4 ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>
                 <Sparkles className="w-4 h-4" />
-                Key Features
+                Tính năng chính
               </span>
               <h2 id="features-heading" className={`text-3xl lg:text-4xl font-display font-medium leading-tight mb-4 ${isDark ? 'text-zinc-100' : 'text-stone-900'}`}>
-                Powerful tools for your career journey
+                Công cụ mạnh mẽ cho hành trình nghề nghiệp
               </h2>
               <p className={`text-lg ${isDark ? 'text-zinc-400' : 'text-stone-600'}`}>
-                Everything you need to find, prepare for, and land your dream job.
+                Tất cả những gì bạn cần để tìm, chuẩn bị và đạt được công việc mơ ước.
               </p>
             </motion.div>
 
@@ -680,12 +714,12 @@ export default function HomePage() {
               <motion.div {...fadeUp}>
                 <span className={`inline-flex items-center gap-2 text-sm font-semibold tracking-wider uppercase mb-4 ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>
                   <Zap className="w-4 h-4" />
-                  Simple Process
+                  Quy trình đơn giản
                 </span>
                 <h2 id="process-heading" className={`text-3xl lg:text-4xl font-display font-medium leading-tight mb-4 ${isDark ? 'text-zinc-100' : 'text-stone-900'}`}>
-                  Four steps to your next career
+                  Bốn bước đến nghề nghiệp tiếp theo
                 </h2>
-                <p className={`text-lg mb-8 ${isDark ? 'text-zinc-400' : 'text-stone-600'}`}>A clear path designed to respect your time and abilities.</p>
+                <p className={`text-lg mb-8 ${isDark ? 'text-zinc-400' : 'text-stone-600'}`}>Lộ trình rõ ràng được thiết kế để phù hợp với thời gian và khả năng của bạn.</p>
 
                 {/* Roadmap */}
                 <div className="relative">
@@ -775,10 +809,10 @@ export default function HomePage() {
             <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto">
               <span className={`inline-flex items-center gap-2 text-sm font-semibold tracking-wider uppercase mb-4 ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>
                 <Star className="w-4 h-4" />
-                Trusted By Industry Leaders
+                Tin tưởng bởi các tổ chức hàng đầu
               </span>
-              <h2 id="partners-heading" className={`text-3xl lg:text-4xl font-display font-medium leading-tight mb-4 ${isDark ? 'text-zinc-100' : 'text-stone-900'}`}>Our Partners</h2>
-              <p className={`text-lg ${isDark ? 'text-zinc-400' : 'text-stone-600'}`}>Leading organizations committed to disability inclusion and accessible workplaces.</p>
+              <h2 id="partners-heading" className={`text-3xl lg:text-4xl font-display font-medium leading-tight mb-4 ${isDark ? 'text-zinc-100' : 'text-stone-900'}`}>Đối tác của chúng tôi</h2>
+              <p className={`text-lg ${isDark ? 'text-zinc-400' : 'text-stone-600'}`}>Các tổ chức hàng đầu cam kết hỗ trợ người khuyết tật hòa nhập vào môi trường làm việc.</p>
             </motion.div>
           </div>
 
@@ -811,10 +845,10 @@ export default function HomePage() {
           </div>
 
           <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.2 }} className="mt-12 text-center">
-            <p className={`mb-4 ${isDark ? 'text-zinc-500' : 'text-stone-500'}`}>Want to partner with us?</p>
+            <p className={`mb-4 ${isDark ? 'text-zinc-500' : 'text-stone-500'}`}>Muốn hợp tác cùng chúng tôi?</p>
             <Link to="/partners">
               <Button variant="outline" className={`border-sky-500 transition-colors ${isDark ? 'text-sky-400 hover:bg-zinc-700 hover:border-sky-400' : 'text-sky-600 hover:bg-sky-50 hover:border-sky-600'}`}>
-                Become a Partner
+                Trở thành đối tác
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             </Link>
@@ -846,10 +880,10 @@ export default function HomePage() {
                 <motion.div {...fadeUp} className="mb-8">
                   <span className={`inline-flex items-center gap-2 text-sm font-semibold tracking-wider uppercase mb-4 ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>
                     <Heart className="w-4 h-4" />
-                    Why Choose Us
+                    Tại sao chọn chúng tôi
                   </span>
-                  <h2 id="values-heading" className={`text-3xl lg:text-4xl font-display font-medium leading-tight mb-4 ${isDark ? 'text-zinc-100' : 'text-stone-900'}`}>Why people trust us</h2>
-                  <p className={`text-lg ${isDark ? 'text-zinc-400' : 'text-stone-600'}`}>We believe everyone deserves a fulfilling career. Our platform is designed with that belief at its core.</p>
+                  <h2 id="values-heading" className={`text-3xl lg:text-4xl font-display font-medium leading-tight mb-4 ${isDark ? 'text-zinc-100' : 'text-stone-900'}`}>Lý do mọi người tin tưởng Avora</h2>
+                  <p className={`text-lg ${isDark ? 'text-zinc-400' : 'text-stone-600'}`}>Chúng tôi tin rằng mọi người đều xứng đáng có một sự nghiệp ý nghĩa. Nền tảng được xây dựng với niềm tin đó làm cốt lõi.</p>
                 </motion.div>
 
                 <div className="grid sm:grid-cols-2 gap-6">
@@ -889,10 +923,10 @@ export default function HomePage() {
             <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-12">
               <span className={`inline-flex items-center gap-2 text-sm font-semibold tracking-wider uppercase mb-4 ${isDark ? 'text-sky-400' : 'text-sky-600'}`}>
                 <Star className="w-4 h-4" />
-                Success Stories
+                Câu chuyện thực tế
               </span>
-              <h2 id="testimonials-heading" className={`text-3xl lg:text-4xl font-display font-medium leading-tight mb-4 text-center ${isDark ? 'text-zinc-100' : 'text-stone-900'}`}>What our users say</h2>
-              <p className={`text-lg text-center ${isDark ? 'text-zinc-400' : 'text-stone-600'}`}>Real stories from people who found their dream careers through Avora.</p>
+              <h2 id="testimonials-heading" className={`text-3xl lg:text-4xl font-display font-medium leading-tight mb-4 text-center ${isDark ? 'text-zinc-100' : 'text-stone-900'}`}>Những người tin tưởng Avora nói gì</h2>
+              <p className={`text-lg text-center ${isDark ? 'text-zinc-400' : 'text-stone-600'}`}>Chia sẻ từ các chuyên gia và đối tác đồng hành cùng Avora trên hành trình hòa nhập nghề nghiệp.</p>
             </motion.div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -957,14 +991,14 @@ export default function HomePage() {
           <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
             <motion.div {...fadeUp} className="max-w-2xl mx-auto">
               <h2 id="cta-heading" className="text-3xl lg:text-4xl font-display font-medium leading-tight text-white mb-4">
-                Ready to take the first step?
+                Bắt đầu hành trình của bạn hôm nay?
               </h2>
               <p className="text-xl text-white/90 mb-8 max-w-xl mx-auto">
-                Join thousands of people with disabilities who are building careers they love. It starts with a conversation.
+                Avora hoàn toàn miễn phí. Chỉ cần một cuộc trò chuyện để khám phá điểm mạnh và tìm hướng đi phù hợp với bạn.
               </p>
               <Link to="/login">
                 <Button size="lg" className="bg-white text-sky-600 hover:bg-sky-50 shadow-xl hover:shadow-2xl transition-all duration-300 text-lg px-8">
-                  Get started free
+                  Bắt đầu miễn phí
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
@@ -982,42 +1016,39 @@ export default function HomePage() {
                 <span className="font-bold text-2xl text-white">Avora</span>
               </Link>
               <p className={`text-sm leading-relaxed mb-4 ${isDark ? 'text-zinc-400' : 'text-stone-400'}`}>
-                Empowering people with disabilities to achieve their career goals through AI-powered guidance and personalized support.
+                Hỗ trợ người khuyết tật đạt được mục tiêu nghề nghiệp thông qua AI và hướng dẫn cá nhân hóa.
               </p>
             </div>
-            
-            <nav aria-label="Platform">
-              <h3 className={`font-semibold mb-4 text-sm ${isDark ? 'text-zinc-200' : 'text-stone-200'}`}>Platform</h3>
+
+            <nav aria-label="Nền tảng">
+              <h3 className={`font-semibold mb-4 text-sm ${isDark ? 'text-zinc-200' : 'text-stone-200'}`}>Nền tảng</h3>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/assessment" className="hover:text-white transition-colors">Assessment</Link></li>
-                <li><Link to="/jobs" className="hover:text-white transition-colors">Find Jobs</Link></li>
-                <li><Link to="/roadmaps" className="hover:text-white transition-colors">Roadmaps</Link></li>
-                <li><Link to="/interviews" className="hover:text-white transition-colors">Practice</Link></li>
+                <li><Link to="/assessment" className="hover:text-white transition-colors">Đánh giá năng lực</Link></li>
+                <li><Link to="/jobs" className="hover:text-white transition-colors">Tìm việc làm</Link></li>
+                <li><Link to="/roadmaps" className="hover:text-white transition-colors">Lộ trình học</Link></li>
+                <li><Link to="/interviews" className="hover:text-white transition-colors">Luyện phỏng vấn</Link></li>
               </ul>
             </nav>
-            
-            <nav aria-label="Support">
-              <h3 className={`font-semibold mb-4 text-sm ${isDark ? 'text-zinc-200' : 'text-stone-200'}`}>Support</h3>
+
+            <nav aria-label="Hỗ trợ">
+              <h3 className={`font-semibold mb-4 text-sm ${isDark ? 'text-zinc-200' : 'text-stone-200'}`}>Hỗ trợ</h3>
               <ul className="space-y-3 text-sm">
-                <li><Link to="/help" className="hover:text-white transition-colors">Help Center</Link></li>
-                <li><Link to="/docs" className="hover:text-white transition-colors">Documentation</Link></li>
-                <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link></li>
-                <li><Link to="/terms" className="hover:text-white transition-colors">Terms</Link></li>
+                <li><Link to="/docs" className="hover:text-white transition-colors">Tài liệu</Link></li>
+                <li><Link to="/partners" className="hover:text-white transition-colors">Đối tác</Link></li>
               </ul>
             </nav>
-            
-            <nav aria-label="Connect">
-              <h3 className={`font-semibold mb-4 text-sm ${isDark ? 'text-zinc-200' : 'text-stone-200'}`}>Connect</h3>
+
+            <nav aria-label="Kết nối">
+              <h3 className={`font-semibold mb-4 text-sm ${isDark ? 'text-zinc-200' : 'text-stone-200'}`}>Kết nối</h3>
               <ul className="space-y-3 text-sm">
-                <li><a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-1">Github <ExternalLink className="w-3 h-3" /></a></li>
-                <li><a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">LinkedIn</a></li>
-                <li><a href="mailto:support@avora.com" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="https://github.com/Vanduc127845/Avora-main" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-1">GitHub <ExternalLink className="w-3 h-3" /></a></li>
+                <li><a href="mailto:blackpham530@gmail.com" className="hover:text-white transition-colors">Liên hệ</a></li>
               </ul>
             </nav>
           </div>
-          
+
           <div className={`pt-6 border-t text-sm text-center ${isDark ? 'border-zinc-800' : 'border-stone-800'}`}>
-            <p>&copy; {new Date().getFullYear()} Avora. Built with care for everyone.</p>
+            <p>&copy; {new Date().getFullYear()} Avora. Được xây dựng với tâm huyết vì mọi người.</p>
           </div>
         </div>
       </footer>
