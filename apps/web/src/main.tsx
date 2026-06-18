@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { useAuthStore } from './store';
+import { API_BASE_URL } from './services/api-base-url';
 import './index.css';
 import './i18n';
 
@@ -51,6 +52,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     initAuth();
+    fetch(`${API_BASE_URL}/health`).catch(() => {});
   }, [initAuth]);
 
   return <>{children}</>;
