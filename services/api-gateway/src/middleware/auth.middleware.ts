@@ -4,6 +4,7 @@ import { AppError } from './error.middleware.js';
 import { getOptionalSupabaseAuthClient, isDemoDataMode } from '../utils/supabase.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 
 export interface AuthUser {
   userId: string;
@@ -22,6 +23,12 @@ type DecodedAuthToken = {
   sub?: unknown;
   userId?: unknown;
   email?: unknown;
+};
+
+type SupabaseJwtPayload = {
+  sub?: string;
+  email?: string;
+  role?: string;
 };
 
 const decodeDemoAuthToken = (token: string): AuthUser | null => {
@@ -45,9 +52,27 @@ const decodeDemoAuthToken = (token: string): AuthUser | null => {
   };
 };
 
+// Verify Supabase-issued JWT locally without any HTTP call.
+// Requires SUPABASE_JWT_SECRET env var (Supabase Dashboard → Settings → API → JWT Settings).
+const verifySupabaseJwtLocally = (token: string): AuthUser | null => {
+  if (!SUPABASE_JWT_SECRET) return null;
+  try {
+    const decoded = jwt.verify(token, SUPABASE_JWT_SECRET) as SupabaseJwtPayload;
+    if (!decoded.sub || decoded.role !== 'authenticated') return null;
+    return { userId: decoded.sub, email: decoded.email || '' };
+  } catch {
+    return null;
+  }
+};
+
 const verifySupabaseToken = async (token: string): Promise<AuthUser | null> => {
   if (isDemoDataMode()) return decodeDemoAuthToken(token);
 
+  // Fast path: verify locally with SUPABASE_JWT_SECRET (no network latency, always reliable).
+  const localUser = verifySupabaseJwtLocally(token);
+  if (localUser) return localUser;
+
+  // Slow path: call Supabase API (only used if SUPABASE_JWT_SECRET is not set).
   const supabase = getOptionalSupabaseAuthClient();
   if (!supabase) return null;
 

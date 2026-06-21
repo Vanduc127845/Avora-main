@@ -62,6 +62,8 @@ services:
         sync: false  # Set to your Supabase anon/public key (Settings → API → anon key)
       - key: SUPABASE_SERVICE_KEY
         sync: false  # Set to your Supabase service_role key (Settings → API → service_role key)
+      - key: SUPABASE_JWT_SECRET
+        sync: false  # Set to your Supabase JWT secret (Settings → API → JWT Settings → JWT Secret)
 
       # --- Speech-to-text ---
       - key: ELEVENLABS_API_KEY

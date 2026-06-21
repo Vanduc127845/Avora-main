@@ -12,6 +12,7 @@ import type {
   Roadmap,
   UserProfile,
 } from '../lib/shared';
+import axios from 'axios';
 import { useAuthStore } from '../store/auth.store';
 import { isRequestCanceled } from './api';
 import { getMockDashboardSummary } from './dashboard.service';
@@ -38,6 +39,11 @@ export async function withDemoFallback<T>(
     return await operation;
   } catch (error) {
     if (isRequestCanceled(error)) throw error;
+    // Re-throw auth errors so the axios interceptor can log out the user and
+    // redirect to /login — never silently fall back to demo data on 401/403.
+    if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+      throw error;
+    }
     return fallback();
   }
 }
