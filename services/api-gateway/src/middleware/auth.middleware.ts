@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { createPublicKey, type JsonWebKey } from 'crypto';
 import { AppError } from './error.middleware.js';
 import { getOptionalSupabaseAuthClient, isDemoDataMode } from '../utils/supabase.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
 
 export interface AuthUser {
   userId: string;
@@ -25,10 +26,71 @@ type DecodedAuthToken = {
   email?: unknown;
 };
 
-type SupabaseJwtPayload = {
-  sub?: string;
-  email?: string;
-  role?: string;
+// JWKS cache: keyed by `kid` (Key ID), value is PEM-encoded public key.
+const jwksCache = {
+  keys: new Map<string, string>(),
+  expiresAt: 0,
+};
+
+// Fetch Supabase JWKS once per hour and cache the public keys locally.
+// This handles both current ECC (P-256) tokens and any future key formats
+// without any per-request HTTP call after the first warm-up.
+const refreshJwks = async (): Promise<void> => {
+  if (!SUPABASE_URL || Date.now() < jwksCache.expiresAt) return;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`);
+    if (!res.ok) return;
+    const body = (await res.json()) as { keys?: JsonWebKey[] };
+    if (!Array.isArray(body.keys)) return;
+
+    const next = new Map<string, string>();
+    for (const jwk of body.keys) {
+      try {
+        const pub = createPublicKey({ key: jwk, format: 'jwk' });
+        const kid = (jwk as { kid?: string }).kid ?? '';
+        next.set(kid, pub.export({ type: 'spki', format: 'pem' }) as string);
+      } catch {
+        // Skip unrecognised key types
+      }
+    }
+    if (next.size > 0) {
+      jwksCache.keys = next;
+      jwksCache.expiresAt = Date.now() + 60 * 60 * 1000; // 1 hour
+    }
+  } catch {
+    // Network errors are non-fatal; fall back to Supabase API call
+  }
+};
+
+// Verify a Supabase-issued JWT locally using cached JWKS public keys.
+// Supports ES256 (current default) and RS256. No per-request HTTP overhead
+// once the cache is warm (refreshed hourly).
+const verifyWithJwks = async (token: string): Promise<AuthUser | null> => {
+  if (!SUPABASE_URL) return null;
+  await refreshJwks();
+  if (jwksCache.keys.size === 0) return null;
+
+  const header = jwt.decode(token, { complete: true })?.header;
+  const kid = typeof header?.kid === 'string' ? header.kid : '';
+
+  // Prefer the key that matches the token's kid; fall back to trying all keys.
+  const candidates =
+    kid && jwksCache.keys.has(kid)
+      ? [jwksCache.keys.get(kid)!]
+      : [...jwksCache.keys.values()];
+
+  for (const pem of candidates) {
+    try {
+      const payload = jwt.verify(token, pem, {
+        algorithms: ['ES256', 'RS256'],
+      }) as { sub?: string; email?: string; role?: string };
+      if (!payload.sub || payload.role !== 'authenticated') return null;
+      return { userId: payload.sub, email: payload.email || '' };
+    } catch {
+      // Wrong key or bad signature — try next candidate
+    }
+  }
+  return null;
 };
 
 const decodeDemoAuthToken = (token: string): AuthUser | null => {
@@ -52,27 +114,14 @@ const decodeDemoAuthToken = (token: string): AuthUser | null => {
   };
 };
 
-// Verify Supabase-issued JWT locally without any HTTP call.
-// Requires SUPABASE_JWT_SECRET env var (Supabase Dashboard → Settings → API → JWT Settings).
-const verifySupabaseJwtLocally = (token: string): AuthUser | null => {
-  if (!SUPABASE_JWT_SECRET) return null;
-  try {
-    const decoded = jwt.verify(token, SUPABASE_JWT_SECRET) as SupabaseJwtPayload;
-    if (!decoded.sub || decoded.role !== 'authenticated') return null;
-    return { userId: decoded.sub, email: decoded.email || '' };
-  } catch {
-    return null;
-  }
-};
-
 const verifySupabaseToken = async (token: string): Promise<AuthUser | null> => {
   if (isDemoDataMode()) return decodeDemoAuthToken(token);
 
-  // Fast path: verify locally with SUPABASE_JWT_SECRET (no network latency, always reliable).
-  const localUser = verifySupabaseJwtLocally(token);
+  // Fast path: verify locally with cached JWKS keys — no HTTP call per request.
+  const localUser = await verifyWithJwks(token);
   if (localUser) return localUser;
 
-  // Slow path: call Supabase API (only used if SUPABASE_JWT_SECRET is not set).
+  // Slow path: call Supabase API (used on first request or when JWKS is unreachable).
   const supabase = getOptionalSupabaseAuthClient();
   if (!supabase) return null;
 
