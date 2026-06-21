@@ -84,9 +84,10 @@ export const authMiddleware = async (
     req.user = supabaseUser || verifyLocalJwt(token);
     next();
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
+    const name = error instanceof Error ? error.name : '';
+    if (error instanceof jwt.JsonWebTokenError || name === 'JsonWebTokenError') {
       next(new AppError('Invalid token', 401));
-    } else if (error instanceof jwt.TokenExpiredError) {
+    } else if (error instanceof jwt.TokenExpiredError || name === 'TokenExpiredError') {
       next(new AppError('Token expired', 401));
     } else {
       next(error);
@@ -107,6 +108,6 @@ export const optionalAuth = async (
     }
     next();
   } catch {
-    next();
+    next(); // optionalAuth never blocks
   }
 };

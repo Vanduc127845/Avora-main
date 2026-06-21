@@ -58,8 +58,10 @@ services:
       # --- Supabase (Google/Microsoft login) ---
       - key: SUPABASE_URL
         value: https://hquyyfqmdifhoevhdhlb.supabase.co
+      - key: SUPABASE_ANON_KEY
+        sync: false  # Set to your Supabase anon/public key (Settings → API → anon key)
       - key: SUPABASE_SERVICE_KEY
-        sync: false  # Set this in Render dashboard → Environment (secret key from Supabase)
+        sync: false  # Set to your Supabase service_role key (Settings → API → service_role key)
 
       # --- Speech-to-text ---
       - key: ELEVENLABS_API_KEY
