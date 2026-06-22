@@ -858,6 +858,34 @@ export class AIService {
     const agentId = 'assessment';
     const assessmentContext: ChatContext = { ...context, agentId };
     const deterministic = this.buildDeterministicAssessment(message, assessmentContext);
+
+    if (this.isConfigured()) {
+      try {
+        const memoryContext = await this.memoryService.getContext(userId, agentId);
+        const systemPrompt = [
+          buildAgentSystemPrompt(assessmentContext),
+          memoryContext ? `Bộ nhớ phiên của agent:\n${memoryContext}` : '',
+        ].filter(Boolean).join('\n\n');
+
+        const llmResponse = await this.callModel([
+          { role: 'system', content: systemPrompt },
+          ...(assessmentContext.history || []).slice(-8),
+          { role: 'user', content: message },
+        ]);
+
+        if (llmResponse) {
+          const orchestration = { ...deterministic.orchestration, finalRecommendation: llmResponse };
+          await this.rememberInteraction(userId, agentId, message, llmResponse, {
+            ...assessmentContext,
+            moduleContext: { ...(assessmentContext.moduleContext || {}), orchestration },
+          });
+          return { response: llmResponse, orchestration };
+        }
+      } catch (error) {
+        logger.warn('LLM call failed in orchestrateAssessment, using deterministic fallback', { error });
+      }
+    }
+
     await this.rememberInteraction(userId, agentId, message, deterministic.response, {
       ...assessmentContext,
       moduleContext: {
