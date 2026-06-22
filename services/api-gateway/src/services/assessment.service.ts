@@ -62,26 +62,30 @@ export class AssessmentService {
     const supabase = getOptionalSupabaseAdmin();
 
     if (supabase) {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id,email,name,avatar_url,provider,disability_profile,accessibility_settings,career_profile,privacy_settings,created_at,updated_at')
-        .eq('id', userId)
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id,email,name,avatar_url,provider,disability_profile,accessibility_settings,career_profile,privacy_settings,created_at,updated_at')
+          .eq('id', userId)
+          .maybeSingle();
 
-      if (!error && data) {
-        return {
-          id: data.id,
-          email: data.email || '',
-          name: data.name || '',
-          avatar: data.avatar_url || '',
-          provider: data.provider || 'email',
-          disabilityProfile: data.disability_profile || undefined,
-          accessibilitySettings: data.accessibility_settings || undefined,
-          careerProfile: data.career_profile || undefined,
-          privacySettings: data.privacy_settings || undefined,
-          createdAt: data.created_at || new Date().toISOString(),
-          updatedAt: data.updated_at || new Date().toISOString(),
-        } as Partial<UserProfile>;
+        if (!error && data) {
+          return {
+            id: data.id,
+            email: data.email || '',
+            name: data.name || '',
+            avatar: data.avatar_url || '',
+            provider: data.provider || 'email',
+            disabilityProfile: data.disability_profile || undefined,
+            accessibilitySettings: data.accessibility_settings || undefined,
+            careerProfile: data.career_profile || undefined,
+            privacySettings: data.privacy_settings || undefined,
+            createdAt: data.created_at || new Date().toISOString(),
+            updatedAt: data.updated_at || new Date().toISOString(),
+          } as Partial<UserProfile>;
+        }
+      } catch {
+        // Fall through to demo profile when Supabase is unavailable/misconfigured.
       }
     }
 

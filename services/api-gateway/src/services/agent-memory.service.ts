@@ -45,24 +45,29 @@ export class AgentMemoryService {
     const supabase = getOptionalSupabaseAdmin();
 
     if (supabase) {
-      const { data, error } = await supabase
-        .from('agent_memories')
-        .select('user_id, agent_id, summary, facts, updated_at')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false });
+      try {
+        const { data, error } = await supabase
+          .from('agent_memories')
+          .select('user_id, agent_id, summary, facts, updated_at')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false });
 
-      if (error) {
-        logger.warn('Could not list agent memories', { error });
+        if (error) {
+          logger.warn('Could not list agent memories', { error });
+          return [];
+        }
+
+        return ((data || []) as AgentMemoryRow[]).map((row) => ({
+          userId: row.user_id,
+          agentId: row.agent_id,
+          summary: row.summary || '',
+          facts: Array.isArray(row.facts) ? row.facts : [],
+          updatedAt: row.updated_at || new Date().toISOString(),
+        }));
+      } catch (error) {
+        logger.warn('Agent memory list failed', { error });
         return [];
       }
-
-      return ((data || []) as AgentMemoryRow[]).map((row) => ({
-        userId: row.user_id,
-        agentId: row.agent_id,
-        summary: row.summary || '',
-        facts: Array.isArray(row.facts) ? row.facts : [],
-        updatedAt: row.updated_at || new Date().toISOString(),
-      }));
     }
 
     return [...demoAgentMemories.values()]
@@ -74,27 +79,32 @@ export class AgentMemoryService {
     const supabase = getOptionalSupabaseAdmin();
 
     if (supabase) {
-      const { data, error } = await supabase
-        .from('agent_memories')
-        .select('user_id, agent_id, summary, facts, updated_at')
-        .eq('user_id', userId)
-        .eq('agent_id', agentId)
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from('agent_memories')
+          .select('user_id, agent_id, summary, facts, updated_at')
+          .eq('user_id', userId)
+          .eq('agent_id', agentId)
+          .maybeSingle();
 
-      if (error) {
-        logger.warn('Could not load agent memory', { agentId, error });
+        if (error) {
+          logger.warn('Could not load agent memory', { agentId, error });
+          return null;
+        }
+
+        if (!data) return null;
+        const row = data as AgentMemoryRow;
+        return {
+          userId: row.user_id,
+          agentId: row.agent_id,
+          summary: row.summary || '',
+          facts: Array.isArray(row.facts) ? row.facts : [],
+          updatedAt: row.updated_at || new Date().toISOString(),
+        };
+      } catch (error) {
+        logger.warn('Agent memory read failed', { agentId, error });
         return null;
       }
-
-      if (!data) return null;
-      const row = data as AgentMemoryRow;
-      return {
-        userId: row.user_id,
-        agentId: row.agent_id,
-        summary: row.summary || '',
-        facts: Array.isArray(row.facts) ? row.facts : [],
-        updatedAt: row.updated_at || new Date().toISOString(),
-      };
     }
 
     return demoAgentMemories.get(memoryKey(userId, agentId)) || null;

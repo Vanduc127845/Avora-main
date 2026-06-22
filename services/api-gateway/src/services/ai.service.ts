@@ -826,7 +826,13 @@ export class AIService {
       : context;
     const agentId = inferAgentId(routedContext);
 
-    const memoryContext = await this.memoryService.getContext(userId, agentId);
+    // Memory is best-effort: a memory/Supabase failure must never break chat.
+    let memoryContext = '';
+    try {
+      memoryContext = await this.memoryService.getContext(userId, agentId);
+    } catch (error) {
+      logger.warn('Agent memory read skipped', { agentId, error });
+    }
     const systemPrompt = [
       buildAgentSystemPrompt(routedContext),
       memoryContext ? `Bộ nhớ phiên của agent:\n${memoryContext}` : '',
