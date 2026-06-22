@@ -26,6 +26,7 @@ type ChatContext = {
   moduleTitle?: string;
   moduleScope?: string;
   moduleContext?: Record<string, unknown>;
+  concise?: boolean;
 };
 
 type CandidateJob = Pick<Job, 'id' | 'source' | 'url' | 'basic' | 'details' | 'accessibility'>;
@@ -89,6 +90,10 @@ const buildAgentSystemPrompt = (context?: ChatContext) => {
     ? `Ngữ cảnh module dạng JSON: ${JSON.stringify(context.moduleContext)}`
     : '';
 
+  const conciseLine = context?.concise
+    ? 'QUAN TRỌNG: Trả lời thật ngắn gọn, tối đa 2-3 câu hoặc vài gạch đầu dòng. Đi thẳng vào trọng tâm, không lan man, không lặp lại câu hỏi.'
+    : '';
+
   return [
     SYSTEM_PROMPT,
     AGENT_PROMPTS[agentId] || AGENT_PROMPTS.general,
@@ -97,6 +102,7 @@ const buildAgentSystemPrompt = (context?: ChatContext) => {
     extraContext,
     'Bạn là một chuyên gia trong sản phẩm multi-agent. Hãy ở đúng phạm vi; nếu cần agent khác, hãy nêu tên agent đó và nói rõ dữ liệu sẽ bàn giao.',
     'Luôn trả lời bằng tiếng Việt theo mặc định, trừ khi người dùng yêu cầu rõ một ngôn ngữ khác.',
+    conciseLine,
   ]
     .filter(Boolean)
     .join('\n');

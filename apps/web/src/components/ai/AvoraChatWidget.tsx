@@ -147,6 +147,7 @@ export default function AvoraChatWidget() {
           routePath: location.pathname,
           moduleTitle: activeAgent.label,
           moduleScope: activeAgent.scope,
+          concise: true,
           history: agentMessages.slice(-8).map((message) => ({
             role: message.role,
             content: message.content,
