@@ -318,6 +318,17 @@ export default function DashboardPage() {
     { rank: 4, name: firstName, level: 4, xp: 1240, isCurrentUser: true },
   ];
 
+  // Quick-start checklist shown when there are no AI career matches yet,
+  // so the suggestions card is useful (and not empty) for new users.
+  const quickStart = [
+    { key: 'completeProfile', to: '/profile', icon: UserRoundCheck, done: stepDone.profile },
+    { key: 'completeAssessment', to: '/assessment', icon: Sparkles, done: stepDone.assessment },
+    { key: 'saveJob', to: '/jobs', icon: Briefcase, done: stepDone.jobs },
+    { key: 'practiceInterview', to: '/interviews', icon: Mic, done: stepDone.interview },
+  ]
+    .filter((s) => !s.done)
+    .slice(0, 3);
+
   return (
     <div className="mx-auto max-w-[1180px] space-y-5 text-stone-950">
       {/* Hero */}
@@ -473,7 +484,37 @@ export default function DashboardPage() {
             {t('dashboard.insights.loading')}
           </p>
         ) : (
-          <p className="text-sm leading-relaxed text-stone-600">{insight.text || t('dashboard.insights.fallback')}</p>
+          <>
+            <p className="text-sm leading-relaxed text-stone-600">{insight.text || t('dashboard.insights.fallback')}</p>
+            {quickStart.length > 0 && (
+              <>
+                <p className="mb-2 mt-4 text-xs font-bold uppercase tracking-[0.12em] text-stone-400">
+                  {t('dashboard.insights.quickStart')}
+                </p>
+                <ul className="space-y-2">
+                  {quickStart.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <li key={item.key}>
+                        <Link
+                          to={item.to}
+                          className="interactive-card focus-ring group flex items-center gap-3 rounded-[14px] border border-stone-100 bg-stone-50 px-4 py-3 hover:border-primary-200 hover:bg-primary-50"
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm">
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-sm font-bold text-stone-900">
+                            {t(`dashboard.primaryCta.${item.key}`)}
+                          </span>
+                          <ArrowRight className="interactive-icon h-4 w-4 text-stone-400 group-hover:translate-x-0.5 group-hover:text-primary-600" />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
+          </>
         )}
       </SectionCard>
 

@@ -134,7 +134,8 @@
       "eyebrow": "AVORA SUGGESTS",
       "loading": "Generating personalized suggestions…",
       "viewSkills": "View suggested skills →",
-      "fallback": "Complete your profile and save a few jobs so Avora can give sharper suggestions."
+      "fallback": "Complete your profile and save a few jobs so Avora can give sharper suggestions.",
+      "quickStart": "Quick start"
     },
     "skills": {
       "title": "Your skills",

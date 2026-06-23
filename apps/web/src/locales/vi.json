@@ -134,7 +134,8 @@
       "eyebrow": "AVORA GỢI Ý",
       "loading": "Đang tạo gợi ý cá nhân hoá…",
       "viewSkills": "Xem các kỹ năng đề xuất →",
-      "fallback": "Hoàn thiện hồ sơ và lưu một vài việc làm để Avora đưa ra gợi ý sát hơn."
+      "fallback": "Hoàn thiện hồ sơ và lưu một vài việc làm để Avora đưa ra gợi ý sát hơn.",
+      "quickStart": "Bắt đầu nhanh"
     },
     "skills": {
       "title": "Kỹ năng của bạn",
