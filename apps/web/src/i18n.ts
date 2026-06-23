@@ -20,8 +20,10 @@ i18n
     interpolation: {
       escapeValue: false,
     },
+    // Vietnamese-first product: only honor an explicit saved choice,
+    // otherwise fall back to vi (do not auto-switch by browser language).
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage'],
       caches: ['localStorage'],
     },
   });
