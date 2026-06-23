@@ -1,180 +1,54 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
-  ArrowRight,
-  BarChart3,
-  BookOpenCheck,
   Briefcase,
-  CalendarDays,
-  Check,
-  ChevronDown,
-  FileText,
   HeartPulse,
-  LineChart,
   Loader2,
-  Map,
-  MessageCircle,
+  Map as MapIcon,
   Mic,
-  MoreHorizontal,
-  PanelTop,
-  Plus,
-  Search,
-  Settings2,
   ShieldCheck,
   Sparkles,
   Target,
+  TrendingUp,
   UserRoundCheck,
 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store';
 import { dashboardService, handleApiError } from '../../../services';
-import type { Assessment, InterviewSession, Job, Roadmap } from '../../../lib/shared';
+import type { Assessment, GapSkill, InterviewSession, Job, Roadmap, Skill } from '../../../lib/shared';
+import {
+  AiInsight,
+  EmptyState,
+  LearningPathStepper,
+  MilestoneStepper,
+  PrimaryCta,
+  SectionCard,
+  SkillBars,
+  type MilestoneStep,
+  type PathStep,
+} from '../components';
+import { useDashboardInsight } from '../hooks/useDashboardInsight';
 
-const collaborators = [
-  { name: 'Avora', image: 'A', tone: 'bg-stone-950 text-white' },
-  { name: 'Coach', image: 'C', tone: 'bg-sky-100 text-sky-800' },
-  { name: 'You', image: 'Y', tone: 'bg-primary-100 text-primary-800' },
-];
+type Snapshot = {
+  savedJobs: Job[];
+  roadmaps: Roadmap[];
+  interviews: InterviewSession[];
+  assessments: Assessment[];
+};
 
-const metrics = [
-  { label: 'Profile', value: '75%', delta: '+12%', icon: UserRoundCheck, tone: 'border-primary-200 bg-primary-50 text-primary-700' },
-  { label: 'Roadmaps', value: '3', delta: '+1', icon: Map, tone: 'border-sky-200 bg-sky-50 text-sky-700' },
-  { label: 'Job matches', value: '12', delta: '+5', icon: Briefcase, tone: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
-  { label: 'Practice', value: '45%', delta: '+8%', icon: Mic, tone: 'border-amber-200 bg-amber-50 text-amber-700' },
-];
-
-const progressTimeline = [
-  { label: 'Profile', value: 75, amount: '75%', color: 'bg-primary-500' },
-  { label: 'Assessment', value: 100, amount: '100%', color: 'bg-stone-950' },
-  { label: 'Jobs', value: 62, amount: '12 saved', color: 'bg-sky-500' },
-  { label: 'Interview', value: 45, amount: '1 session', color: 'bg-amber-500' },
-];
-
-const platforms = [
-  { name: 'Assessment', value: '100%', amount: 'Complete', icon: Sparkles, color: 'text-primary-600', bg: 'bg-primary-50' },
-  { name: 'Jobs', value: '62%', amount: '12 roles', icon: Briefcase, color: 'text-sky-600', bg: 'bg-sky-50' },
-  { name: 'Roadmaps', value: '58%', amount: '3 plans', icon: Map, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-  { name: 'Interview', value: '45%', amount: 'Needs work', icon: Mic, color: 'text-amber-600', bg: 'bg-amber-50' },
-];
-
-const nextActions = [
-  {
-    title: 'Complete profile details',
-    description: 'Add target roles, access preferences, and work style.',
-    path: '/profile',
-    status: 'High impact',
-    icon: FileText,
-  },
-  {
-    title: 'Start one focused roadmap',
-    description: 'Turn a suitable job into a four-week learning plan.',
-    path: '/roadmaps',
-    status: 'Recommended',
-    icon: BookOpenCheck,
-  },
-  {
-    title: 'Practice interview answer',
-    description: 'Use AI feedback for one disclosure or STAR response.',
-    path: '/interviews',
-    status: '20 min',
-    icon: MessageCircle,
-  },
-];
-
-const tableRows = [
-  { module: 'Profile', owner: 'You', score: '75%', status: 'Review', trend: '+12%', icon: UserRoundCheck },
-  { module: 'Career assessment', owner: 'Avora', score: '100%', status: 'Done', trend: '+24%', icon: Sparkles },
-  { module: 'Accessible jobs', owner: 'Avora', score: '62%', status: 'Active', trend: '+5', icon: Briefcase },
-  { module: 'Mock interview', owner: 'Coach', score: '45%', status: 'Next', trend: '+8%', icon: Mic },
-];
-
-const insights = [
-  { label: 'Best match', value: 'Frontend', helper: 'Remote-first roles', icon: Target },
-  { label: 'Access fit', value: '82%', helper: 'High compatibility', icon: ShieldCheck },
-  { label: 'Next review', value: 'Thu', helper: 'Roadmap check-in', icon: CalendarDays },
-];
-
-function AvatarStack() {
-  return (
-    <div className="flex items-center">
-      {collaborators.map((person, index) => (
-        <div
-          key={person.name}
-          className={`interactive-icon flex h-9 w-9 items-center justify-center rounded-full border-2 border-white text-xs font-bold shadow-sm hover:z-10 hover:scale-105 ${person.tone}`}
-          style={{ marginLeft: index === 0 ? 0 : -8 }}
-          title={person.name}
-        >
-          {person.image}
-        </div>
-      ))}
-      <Link
-        to="/assessment"
-        className="interactive-button -ml-2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-white text-stone-500 shadow-sm hover:scale-105 hover:text-stone-950"
-        aria-label="Add assessment context"
-      >
-        <Plus className="h-4 w-4" />
-      </Link>
-    </div>
-  );
-}
-
-function ProgressTrack({ items = progressTimeline }: { items?: typeof progressTimeline }) {
-  return (
-    <div className="interactive-card rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Pipeline</p>
-          <h2 className="mt-1 text-xl font-bold text-stone-950">Career readiness</h2>
-        </div>
-        <button
-          type="button"
-          className="interactive-button inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 text-stone-500 hover:border-sky-200 hover:bg-stone-50 hover:text-stone-950"
-          aria-label="Pipeline settings"
-        >
-          <Settings2 className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="space-y-4">
-        {items.map((item) => (
-          <div key={item.label}>
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="font-semibold text-stone-700">{item.label}</span>
-              <span className="font-bold text-stone-950">{item.amount}</span>
-            </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-stone-100">
-              <div className={`h-full rounded-full transition-[width] duration-300 ease-out ${item.color}`} style={{ width: `${item.value}%` }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function WeeklyChart({ bars }: { bars: { label: string; value: number; color: string }[] }) {
-  return (
-    <div className="flex h-[180px] items-end gap-3 rounded-[24px] bg-stone-50 px-4 pb-4 pt-6">
-      {bars.map((bar) => (
-        <div key={bar.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-          <div className="flex h-28 w-full max-w-9 items-end rounded-full bg-white p-1 shadow-inner">
-            <div className={`w-full rounded-full transition-[height] duration-300 ease-out ${bar.color}`} style={{ height: `${bar.value}%` }} />
-          </div>
-          <span className="text-[11px] font-bold text-stone-400">{bar.label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
+const IMPORTANCE_ORDER: Record<GapSkill['importance'], number> = {
+  critical: 0,
+  important: 1,
+  'nice-to-have': 2,
+};
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user } = useAuthStore();
-  const firstName = user?.name?.split(' ')[0] || 'there';
-  const [snapshot, setSnapshot] = React.useState<{
-    savedJobs: Job[];
-    roadmaps: Roadmap[];
-    interviews: InterviewSession[];
-    assessments: Assessment[];
-  }>({
+  const firstName = user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'bạn';
+
+  const [snapshot, setSnapshot] = React.useState<Snapshot>({
     savedJobs: [],
     roadmaps: [],
     interviews: [],
@@ -185,11 +59,9 @@ export default function DashboardPage() {
 
   React.useEffect(() => {
     let mounted = true;
-
     const loadSnapshot = async () => {
       setIsLoading(true);
       setError(null);
-
       try {
         const summary = await dashboardService.getSummary();
         if (!mounted) return;
@@ -207,13 +79,13 @@ export default function DashboardPage() {
         if (mounted) setIsLoading(false);
       }
     };
-
     loadSnapshot();
     return () => {
       mounted = false;
     };
   }, []);
 
+  // ---- Derived metrics (real data) -------------------------------------------
   const profileCompletion = React.useMemo(() => {
     const checks = [
       Boolean(user?.name),
@@ -228,14 +100,17 @@ export default function DashboardPage() {
     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
   }, [user]);
 
-  const completedAssessments = snapshot.assessments.filter((assessment) => assessment.status === 'completed').length;
+  const skills: Skill[] = user?.careerProfile?.skills || [];
+  const completedAssessments = snapshot.assessments.filter((a) => a.status === 'completed').length;
+  const completedInterviews = snapshot.interviews.filter((i) => i.status === 'completed').length;
   const roadmapAverage = snapshot.roadmaps.length
-    ? Math.round(snapshot.roadmaps.reduce((sum, roadmap) => sum + roadmap.progress.percentComplete, 0) / snapshot.roadmaps.length)
+    ? Math.round(
+        snapshot.roadmaps.reduce((sum, r) => sum + r.progress.percentComplete, 0) / snapshot.roadmaps.length
+      )
     : 0;
-  const completedInterviews = snapshot.interviews.filter((interview) => interview.status === 'completed').length;
   const interviewAverage = snapshot.interviews.length
     ? Math.round(
-        (snapshot.interviews.reduce((sum, interview) => sum + (interview.feedback?.overallScore || 0), 0) /
+        (snapshot.interviews.reduce((sum, i) => sum + (i.feedback?.overallScore || 0), 0) /
           snapshot.interviews.length) *
           10
       )
@@ -248,399 +123,441 @@ export default function DashboardPage() {
       Math.min(100, Math.max(completedInterviews * 25, interviewAverage)) * 0.15
   );
 
-  const liveMetrics = [
-    { label: 'Profile', value: `${profileCompletion}%`, delta: user?.careerProfile?.skills?.length ? `${user.careerProfile.skills.length} skills` : 'Add skills', icon: UserRoundCheck, tone: 'border-primary-200 bg-primary-50 text-primary-700' },
-    { label: 'Roadmaps', value: String(snapshot.roadmaps.length), delta: `${roadmapAverage}% avg`, icon: Map, tone: 'border-sky-200 bg-sky-50 text-sky-700' },
-    { label: 'Saved jobs', value: String(snapshot.savedJobs.length), delta: snapshot.savedJobs.length ? 'Ready' : 'Find roles', icon: Briefcase, tone: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
-    { label: 'Practice', value: `${completedInterviews}/${snapshot.interviews.length}`, delta: interviewAverage ? `${interviewAverage}% score` : 'Start', icon: Mic, tone: 'border-amber-200 bg-amber-50 text-amber-700' },
-  ];
-
-  const liveProgressTimeline = [
-    { label: 'Profile', value: profileCompletion, amount: `${profileCompletion}%`, color: 'bg-primary-500' },
-    { label: 'Assessment', value: completedAssessments ? 100 : 0, amount: completedAssessments ? 'Complete' : 'Start', color: 'bg-stone-950' },
-    { label: 'Jobs', value: Math.min(100, snapshot.savedJobs.length * 20), amount: `${snapshot.savedJobs.length} saved`, color: 'bg-sky-500' },
-    { label: 'Interview', value: Math.min(100, Math.max(completedInterviews * 25, interviewAverage)), amount: `${snapshot.interviews.length} sessions`, color: 'bg-amber-500' },
-  ];
-  const readinessBars = liveProgressTimeline.map((item) => ({
-    label: item.label,
-    value: item.value,
-    color: item.color,
+  // ---- Step progress ---------------------------------------------------------
+  const stepDone = {
+    profile: profileCompletion >= 60,
+    assessment: completedAssessments > 0,
+    jobs: snapshot.savedJobs.length > 0,
+    interview: completedInterviews > 0,
+  };
+  const stepOrder: Array<keyof typeof stepDone> = ['profile', 'assessment', 'jobs', 'interview'];
+  const firstPendingIndex = stepOrder.findIndex((key) => !stepDone[key]);
+  const milestoneSteps: MilestoneStep[] = stepOrder.map((key, index) => ({
+    label: t(`dashboard.step.${key}`),
+    status: stepDone[key]
+      ? 'done'
+      : index === (firstPendingIndex === -1 ? stepOrder.length : firstPendingIndex)
+        ? 'current'
+        : 'locked',
   }));
+  const doneCount = stepOrder.filter((key) => stepDone[key]).length;
 
-  const livePlatforms = [
-    { name: 'Assessment', value: completedAssessments ? '100%' : '0%', amount: completedAssessments ? 'Complete' : 'Needs input', icon: Sparkles, color: 'text-primary-600', bg: 'bg-primary-50' },
-    { name: 'Jobs', value: `${Math.min(100, snapshot.savedJobs.length * 20)}%`, amount: `${snapshot.savedJobs.length} saved roles`, icon: Briefcase, color: 'text-sky-600', bg: 'bg-sky-50' },
-    { name: 'Roadmaps', value: `${roadmapAverage}%`, amount: `${snapshot.roadmaps.length} plans`, icon: Map, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { name: 'Interview', value: `${Math.min(100, Math.max(completedInterviews * 25, interviewAverage))}%`, amount: `${snapshot.interviews.length} sessions`, icon: Mic, color: 'text-amber-600', bg: 'bg-amber-50' },
+  // ---- Primary CTA (first incomplete step) -----------------------------------
+  const primaryCta = React.useMemo(() => {
+    if (profileCompletion < 60)
+      return { key: 'completeProfile', to: '/profile', minutes: 5 };
+    if (completedAssessments === 0)
+      return { key: 'completeAssessment', to: '/assessment', minutes: 5 };
+    if (snapshot.savedJobs.length === 0) return { key: 'saveJob', to: '/jobs', minutes: 0 };
+    if (snapshot.roadmaps.length === 0) return { key: 'createRoadmap', to: '/roadmaps', minutes: 0 };
+    if (completedInterviews === 0)
+      return { key: 'practiceInterview', to: '/interviews', minutes: 20 };
+    return { key: 'allDone', to: '/roadmaps', minutes: 0 };
+  }, [profileCompletion, completedAssessments, completedInterviews, snapshot.savedJobs.length, snapshot.roadmaps.length]);
+
+  const ctaDescription =
+    primaryCta.key === 'allDone'
+      ? t('dashboard.primaryCta.allDoneDesc')
+      : t(`dashboard.primaryCta.${primaryCta.key}Desc`);
+  const ctaTitle =
+    primaryCta.minutes > 0
+      ? `${t(`dashboard.primaryCta.${primaryCta.key}`)} · ${t('dashboard.primaryCta.minutes', { count: primaryCta.minutes })}`
+      : t(`dashboard.primaryCta.${primaryCta.key}`);
+
+  // ---- Career matches --------------------------------------------------------
+  const topRole = user?.careerProfile?.targetRoles?.[0] || snapshot.savedJobs[0]?.basic.title || '';
+  const bestPath = snapshot.roadmaps[0];
+  const accessProfiled = Boolean(user?.disabilityProfile?.primaryType);
+
+  // ---- AI insight ------------------------------------------------------------
+  const insightReady = profileCompletion >= 40 || skills.length > 0;
+  const insight = useDashboardInsight({
+    ready: insightReady && !isLoading,
+    targetRole: topRole,
+    skills: skills.map((s) => s.name),
+    savedJobs: snapshot.savedJobs.length,
+    roadmaps: snapshot.roadmaps.length,
+  });
+
+  // ---- Missing skills (real gapSkills) ---------------------------------------
+  const missingSkills = React.useMemo(() => {
+    const byName = new Map<string, GapSkill>();
+    snapshot.roadmaps.forEach((r) =>
+      (r.gapSkills || []).forEach((gap) => {
+        const existing = byName.get(gap.name);
+        if (!existing || IMPORTANCE_ORDER[gap.importance] < IMPORTANCE_ORDER[existing.importance]) {
+          byName.set(gap.name, gap);
+        }
+      })
+    );
+    return [...byName.values()]
+      .sort((a, b) => IMPORTANCE_ORDER[a.importance] - IMPORTANCE_ORDER[b.importance])
+      .slice(0, 6);
+  }, [snapshot.roadmaps]);
+
+  const importanceLabel = (importance: GapSkill['importance']) =>
+    importance === 'critical'
+      ? t('dashboard.skills.important')
+      : importance === 'important'
+        ? t('dashboard.skills.somewhatImportant')
+        : t('dashboard.skills.niceToHave');
+  const importanceTone = (importance: GapSkill['importance']) =>
+    importance === 'critical'
+      ? 'bg-red-50 text-red-700 border-red-200'
+      : importance === 'important'
+        ? 'bg-amber-50 text-amber-700 border-amber-200'
+        : 'bg-stone-100 text-stone-600 border-stone-200';
+
+  // ---- Learning path steps ---------------------------------------------------
+  const pathSteps: PathStep[] = React.useMemo(() => {
+    if (!bestPath?.phases?.length) return [];
+    const phases = [...bestPath.phases].sort((a, b) => a.order - b.order);
+    const currentIndex = Math.max(0, (bestPath.progress.currentPhase || 1) - 1);
+    const allDone = bestPath.progress.percentComplete >= 100;
+    return phases.map((phase, index) => ({
+      name: phase.name,
+      status: allDone || index < currentIndex ? 'done' : index === currentIndex ? 'current' : 'locked',
+    }));
+  }, [bestPath]);
+
+  // ---- Notifications (rule-based) --------------------------------------------
+  const notifications = React.useMemo(() => {
+    const items: string[] = [];
+    if (profileCompletion < 100)
+      items.push(t('dashboard.notifications.profileIncomplete', { percent: profileCompletion }));
+    if (snapshot.savedJobs.length > 0 && snapshot.roadmaps.length === 0)
+      items.push(t('dashboard.notifications.jobsNoRoadmap', { count: snapshot.savedJobs.length }));
+    if (completedAssessments === 0) items.push(t('dashboard.notifications.assessmentPending'));
+    if (profileCompletion >= 60 && completedInterviews === 0)
+      items.push(t('dashboard.notifications.interviewReady'));
+    return items;
+  }, [t, profileCompletion, snapshot.savedJobs.length, snapshot.roadmaps.length, completedAssessments, completedInterviews]);
+
+  // ---- Metric cards ----------------------------------------------------------
+  const metrics = [
+    {
+      label: t('dashboard.metric.profile'),
+      value: `${profileCompletion}%`,
+      delta: skills.length ? t('dashboard.metric.skillsCount', { count: skills.length }) : t('dashboard.metric.addSkills'),
+      icon: UserRoundCheck,
+      tone: 'border-primary-200 bg-primary-50 text-primary-700',
+    },
+    {
+      label: t('dashboard.metric.roadmaps'),
+      value: String(snapshot.roadmaps.length),
+      delta: t('dashboard.metric.avg', { percent: roadmapAverage }),
+      icon: MapIcon,
+      tone: 'border-sky-200 bg-sky-50 text-sky-700',
+    },
+    {
+      label: t('dashboard.metric.savedJobs'),
+      value: String(snapshot.savedJobs.length),
+      delta: snapshot.savedJobs.length ? t('dashboard.metric.ready') : t('dashboard.metric.findRoles'),
+      icon: Briefcase,
+      tone: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    },
+    {
+      label: t('dashboard.metric.practice'),
+      value: `${completedInterviews}/${snapshot.interviews.length}`,
+      delta: interviewAverage ? t('dashboard.metric.score', { percent: interviewAverage }) : t('dashboard.metric.startShort'),
+      icon: Mic,
+      tone: 'border-amber-200 bg-amber-50 text-amber-700',
+    },
   ];
 
-  const liveTableRows = [
-    { module: 'Profile', owner: 'You', score: `${profileCompletion}%`, status: profileCompletion >= 80 ? 'Ready' : 'Review', trend: user?.careerProfile?.targetRoles?.length ? `${user.careerProfile.targetRoles.length} roles` : 'Missing roles', icon: UserRoundCheck },
-    { module: 'Career assessment', owner: 'Avora', score: completedAssessments ? '100%' : '0%', status: completedAssessments ? 'Done' : 'Start', trend: `${snapshot.assessments.length} runs`, icon: Sparkles },
-    { module: 'Accessible jobs', owner: 'Jobs Agent', score: `${snapshot.savedJobs.length}`, status: snapshot.savedJobs.length ? 'Active' : 'Find', trend: 'saved', icon: Briefcase },
-    { module: 'Mock interview', owner: 'Interview Agent', score: `${snapshot.interviews.length}`, status: completedInterviews ? 'Review' : 'Next', trend: `${completedInterviews} done`, icon: Mic },
-  ];
+  const topSkillName = skills.length
+    ? [...skills].sort((a, b) => (b.level > a.level ? 1 : -1))[0]?.name
+    : '';
 
-  const liveInsights = [
-    { label: 'Best match', value: user?.careerProfile?.targetRoles?.[0] || snapshot.savedJobs[0]?.basic.title || 'Not set', helper: 'From profile and saved jobs', icon: Target },
-    { label: 'Access fit', value: user?.disabilityProfile?.primaryType ? 'Profiled' : 'Needs setup', helper: 'Add access needs in Profile', icon: ShieldCheck },
-    { label: 'Next review', value: snapshot.roadmaps[0] ? 'Roadmap' : 'Assessment', helper: snapshot.roadmaps[0]?.title || 'Start discovery', icon: CalendarDays },
+  const activityStats = [
+    { label: t('dashboard.activity.profileDone'), value: `${profileCompletion}%`, icon: UserRoundCheck },
+    { label: t('dashboard.activity.jobsSaved'), value: String(snapshot.savedJobs.length), icon: Briefcase },
+    { label: t('dashboard.activity.practiced'), value: String(completedInterviews), icon: Mic },
+    { label: t('dashboard.activity.assessmentsDone'), value: String(completedAssessments), icon: Sparkles },
   ];
 
   return (
-    <div className="space-y-5 text-stone-950">
-      <section className="interactive-card overflow-hidden rounded-[32px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5 md:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <AvatarStack />
-            <div className="group flex h-10 min-w-0 items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-3 text-sm font-semibold text-stone-600 transition-all duration-200 ease-out hover:border-sky-200 hover:bg-white hover:shadow-sm">
-              <Search className="interactive-icon h-4 w-4 text-stone-400 group-hover:text-primary-600" />
-              <span className="truncate">Search insights, jobs, roadmaps</span>
-            </div>
-          </div>
-
+    <div className="mx-auto max-w-[1100px] space-y-4 text-stone-950">
+      {/* Section 1 — Hero */}
+      <SectionCard>
+        <p className="text-sm font-bold text-stone-400">{t('dashboard.report')}</p>
+        <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-3xl font-bold leading-tight text-stone-950 sm:text-4xl">
+            {t('dashboard.greeting', { name: firstName })}
+          </h1>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="interactive-button inline-flex h-10 items-center gap-2 rounded-full border border-stone-200 bg-white px-4 text-sm font-bold text-stone-700 hover:border-sky-200 hover:bg-stone-50 hover:text-stone-950"
-            >
-              <Settings2 className="h-4 w-4" />
-              Filters
-            </button>
-            <button
-              type="button"
-              className="interactive-button group inline-flex h-10 items-center gap-2 rounded-full bg-stone-950 px-4 text-sm font-bold text-white hover:bg-stone-800 hover:shadow-lg hover:shadow-stone-900/20"
-            >
-              May 2026
-              <ChevronDown className="interactive-icon h-4 w-4 group-hover:translate-y-0.5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-7 grid gap-5 xl:grid-cols-[1fr_470px]">
-          <div className="min-w-0">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div>
-                <p className="text-sm font-bold text-stone-400">Avora career report</p>
-                <h1 className="mt-1 max-w-2xl text-4xl font-bold leading-none text-stone-950 sm:text-5xl">
-                  Welcome back, {firstName}
-                </h1>
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <span className="text-3xl font-bold tracking-normal text-stone-950">{readiness}% ready</span>
-                  {isLoading ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2.5 py-1 text-xs font-bold text-primary-700">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Syncing
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-primary-500 px-2.5 py-1 text-xs font-bold text-white">Live data</span>
-                  )}
-                  <span className="rounded-full bg-primary-100 px-2.5 py-1 text-xs font-bold text-primary-700">
-                    Accessibility-informed
-                  </span>
-                </div>
-                <p className="mt-2 text-sm font-medium text-stone-500">
-                  Updated from your current profile, jobs, roadmaps, and interview practice.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Link
-                  to="/assessment"
-                  className="interactive-button group inline-flex h-11 items-center rounded-full bg-primary-500 px-5 text-sm font-bold text-white shadow-sm shadow-primary-500/20 hover:bg-primary-600 hover:shadow-lg hover:shadow-primary-500/25"
-                >
-                  Continue
-                  <ArrowRight className="interactive-icon ml-2 h-4 w-4 group-hover:translate-x-0.5" />
-                </Link>
-                <button
-                  type="button"
-                  className="interactive-button inline-flex h-11 w-11 items-center justify-center rounded-full border border-stone-200 text-stone-500 hover:border-sky-200 hover:bg-stone-50 hover:text-stone-950"
-                  aria-label="More dashboard actions"
-                >
-                  <MoreHorizontal className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3 md:grid-cols-4">
-              {liveMetrics.map((metric) => {
-                const Icon = metric.icon;
-                return (
-                  <article key={metric.label} className={`interactive-card group rounded-[24px] border p-4 hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md hover:shadow-sky-950/5 ${metric.tone}`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <Icon className="interactive-icon h-5 w-5 group-hover:scale-105" />
-                      <span className="interactive-card rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold group-hover:bg-white">{metric.delta}</span>
-                    </div>
-                    <p className="interactive-icon mt-5 text-2xl font-bold text-stone-950 group-hover:text-stone-800">{metric.value}</p>
-                    <p className="mt-1 text-sm font-semibold">{metric.label}</p>
-                  </article>
-                );
-              })}
-            </div>
-
-            {error && (
-              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-                Some dashboard data could not sync: {error}
-              </div>
+            <span className="text-2xl font-bold text-stone-950">
+              {t('dashboard.readyPercent', { percent: readiness })}
+            </span>
+            {isLoading ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2.5 py-1 text-xs font-bold text-primary-700">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                {t('dashboard.syncing')}
+              </span>
+            ) : (
+              <span className="rounded-full bg-primary-500 px-2.5 py-1 text-xs font-bold text-white">
+                {t('dashboard.liveData')}
+              </span>
             )}
-
-            <div className="interactive-card mt-5 rounded-[28px] border border-stone-200 bg-stone-50 p-3 hover:border-sky-200">
-              <div className="flex flex-col gap-3 rounded-[22px] bg-white p-4 shadow-sm transition-shadow duration-200 ease-out hover:shadow-md lg:flex-row lg:items-center">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-700">
-                    <BarChart3 className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-3 text-sm font-bold text-stone-950">
-                      <span>4 modules</span>
-                      <span>{snapshot.savedJobs.length} saved jobs</span>
-                      <span>{snapshot.roadmaps.length} plans</span>
-                      <span>{snapshot.interviews.length} practice</span>
-                    </div>
-                    <div className="mt-2 grid h-2 overflow-hidden rounded-full bg-stone-100 grid-cols-[40fr_30fr_22fr_8fr]">
-                      <div className="bg-primary-500" />
-                      <div className="bg-sky-500" />
-                      <div className="bg-amber-400" />
-                      <div className="bg-stone-950" />
-                    </div>
-                  </div>
-                </div>
-                <Link
-                  to="/jobs"
-                  className="interactive-button inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-stone-950 px-5 text-sm font-bold text-white hover:bg-stone-800 hover:shadow-lg hover:shadow-stone-900/20"
-                >
-                  Details
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-2">
-            <article className="interactive-card group rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400">Top match</p>
-              <p className="mt-3 text-3xl font-bold text-stone-950">{readiness}</p>
-              <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-stone-500">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-xs text-sky-700">A</span>
-                {user?.careerProfile?.targetRoles?.[0] || snapshot.savedJobs[0]?.basic.title || 'Pick a role'}
-              </div>
-            </article>
-
-            <article className="interactive-card group rounded-[24px] bg-stone-950 p-4 text-white shadow-sm hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-300/15">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400">Best path</p>
-                <Sparkles className="interactive-icon h-4 w-4 text-amber-300 group-hover:scale-105" />
-              </div>
-              <p className="mt-3 text-2xl font-bold">{user?.careerProfile?.targetRoles?.[0] || 'Assessment'}</p>
-              <p className="mt-1 text-sm font-medium text-stone-300">
-                {snapshot.roadmaps[0]?.title || 'Start a focused pathway'}
-              </p>
-            </article>
-
-            {liveInsights.map((item) => {
-              const Icon = item.icon;
-              return (
-                <article key={item.label} className="interactive-card group rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400">{item.label}</p>
-                    <Icon className="interactive-icon h-4 w-4 text-primary-500 group-hover:scale-105" />
-                  </div>
-                  <p className="mt-4 text-2xl font-bold text-stone-950">{item.value}</p>
-                  <p className="mt-1 text-sm font-medium text-stone-500">{item.helper}</p>
-                </article>
-              );
-            })}
           </div>
         </div>
-      </section>
+        <p className="mt-2 text-sm font-medium text-stone-500">{t('dashboard.updatedFrom')}</p>
 
-      <section className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr] xl:grid-cols-1 2xl:grid-cols-[0.85fr_1.15fr]">
-          <div className="interactive-card rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Channels</p>
-                <h2 className="mt-1 text-xl font-bold text-stone-950">Work with modules</h2>
-              </div>
-              <button
-                type="button"
-                className="interactive-button inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 text-stone-500 hover:border-sky-200 hover:bg-stone-50 hover:text-stone-950"
-                aria-label="Module filters"
+        <div className="mt-6">
+          <MilestoneStepper
+            steps={milestoneSteps}
+            caption={t('dashboard.stepProgress', { done: doneCount, total: stepOrder.length })}
+          />
+        </div>
+
+        {error && (
+          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+            {t('dashboard.syncError', { error })}
+          </div>
+        )}
+
+        <div className="mt-6">
+          <PrimaryCta
+            eyebrow={t('dashboard.primaryCta.eyebrow')}
+            title={ctaTitle}
+            description={ctaDescription}
+            buttonLabel={t('dashboard.primaryCta.start')}
+            to={primaryCta.to}
+          />
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {metrics.map((metric) => {
+            const Icon = metric.icon;
+            return (
+              <article
+                key={metric.label}
+                className={`interactive-card group rounded-[20px] border p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md hover:shadow-sky-950/5 ${metric.tone}`}
               >
-                <PanelTop className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {livePlatforms.map((platform) => {
-                const Icon = platform.icon;
-                return (
-                  <Link
-                    key={platform.name}
-                    to={
-                      platform.name === 'Assessment'
-                        ? '/assessment'
-                        : platform.name === 'Jobs'
-                          ? '/jobs'
-                          : platform.name === 'Roadmaps'
-                            ? '/roadmaps'
-                            : '/interviews'
-                    }
-                    className="interactive-card focus-ring group flex items-center justify-between gap-3 rounded-[20px] border border-stone-100 bg-stone-50 p-3 hover:-translate-y-0.5 hover:border-primary-200 hover:bg-primary-50 hover:shadow-sm"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className={`interactive-icon flex h-10 w-10 items-center justify-center rounded-full group-hover:scale-105 group-hover:shadow-sm ${platform.bg} ${platform.color}`}>
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-stone-950">{platform.name}</p>
-                        <p className="text-xs font-semibold text-stone-400">{platform.amount}</p>
-                      </div>
-                    </div>
-                    <span className="interactive-icon text-sm font-bold text-stone-950 group-hover:text-primary-700">{platform.value}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="interactive-card rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Live mix</p>
-                <h2 className="mt-1 text-xl font-bold text-stone-950">Readiness momentum</h2>
-              </div>
-              <div className="inline-flex rounded-full bg-stone-100 p-1">
-                <span className="rounded-full bg-stone-950 px-3 py-1 text-xs font-bold text-white">Now</span>
-                <span className="interactive-card rounded-full px-3 py-1 text-xs font-bold text-stone-500 hover:bg-white hover:text-stone-800">Goals</span>
-              </div>
-            </div>
-
-            <WeeklyChart bars={readinessBars} />
-          </div>
+                <div className="flex items-center justify-between gap-3">
+                  <Icon className="h-5 w-5" />
+                  <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold">{metric.delta}</span>
+                </div>
+                <p className="mt-4 text-2xl font-bold text-stone-950">{metric.value}</p>
+                <p className="mt-1 text-sm font-semibold">{metric.label}</p>
+              </article>
+            );
+          })}
         </div>
+      </SectionCard>
 
-        <div className="interactive-card rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Avora modules</p>
-              <h2 className="mt-1 text-xl font-bold text-stone-950">Module performance</h2>
+      {/* Section 2 — Career matches */}
+      <SectionCard title={t('dashboard.match.title')}>
+        <div className="grid gap-3 md:grid-cols-3">
+          <Link
+            to="/jobs"
+            className="interactive-card focus-ring group rounded-[20px] border border-stone-200 bg-white p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400">
+                {t('dashboard.match.topMatch')}
+              </p>
+              <Target className="h-4 w-4 text-primary-500" />
             </div>
-            <div className="flex items-center gap-2">
-              <button type="button" className="interactive-button rounded-full bg-stone-100 px-3 py-1.5 text-xs font-bold text-stone-700 hover:bg-white hover:text-stone-950 hover:shadow-sm">
-                Readiness
-              </button>
-              <button type="button" className="interactive-button rounded-full px-3 py-1.5 text-xs font-bold text-stone-400 hover:bg-stone-100 hover:text-stone-700">
-                Fit
-              </button>
-              <button type="button" className="interactive-button rounded-full px-3 py-1.5 text-xs font-bold text-stone-400 hover:bg-stone-100 hover:text-stone-700">
-                Next
-              </button>
-            </div>
-          </div>
+            <p className="mt-3 truncate text-xl font-bold text-stone-950">
+              {topRole || t('dashboard.match.pickRole')}
+            </p>
+            <p className="mt-1 text-sm font-medium text-stone-500">{t('dashboard.match.roleHint')}</p>
+          </Link>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] border-separate border-spacing-y-2 text-left">
-              <thead>
-                <tr className="text-xs font-bold uppercase tracking-[0.12em] text-stone-400">
-                  <th className="px-3 py-2">Module</th>
-                  <th className="px-3 py-2">Owner</th>
-                  <th className="px-3 py-2">Score</th>
-                  <th className="px-3 py-2">Trend</th>
-                  <th className="px-3 py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {liveTableRows.map((row) => {
-                  const Icon = row.icon;
-                  return (
-                    <tr key={row.module} className="dashboard-row group rounded-[18px] bg-stone-50 text-sm hover:bg-sky-50/70">
-                      <td className="rounded-l-[18px] px-3 py-3">
-                        <div className="flex items-center gap-3">
-                          <span className="interactive-icon flex h-9 w-9 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm group-hover:scale-105 group-hover:bg-primary-50">
-                            <Icon className="h-4 w-4" />
-                          </span>
-                          <span className="font-bold text-stone-950">{row.module}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 font-semibold text-stone-500">{row.owner}</td>
-                      <td className="px-3 py-3 font-bold text-stone-950">{row.score}</td>
-                      <td className="px-3 py-3">
-                        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-emerald-700">{row.trend}</span>
-                      </td>
-                      <td className="rounded-r-[18px] px-3 py-3">
-                        <span className="interactive-icon inline-flex items-center gap-1 rounded-full bg-stone-950 px-3 py-1 text-xs font-bold text-white group-hover:scale-[1.02] group-hover:bg-stone-800">
-                          <Check className="h-3 w-3" />
-                          {row.status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <Link
+            to="/roadmaps"
+            className="interactive-card focus-ring group rounded-[20px] bg-stone-950 p-4 text-white transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-300/15"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400">
+                {t('dashboard.match.bestPath')}
+              </p>
+              <Sparkles className="h-4 w-4 text-amber-300" />
+            </div>
+            <p className="mt-3 truncate text-xl font-bold">
+              {bestPath?.title || topRole || t('dashboard.match.startPathway')}
+            </p>
+            <p className="mt-1 text-sm font-medium text-stone-300">
+              {bestPath
+                ? t('dashboard.path.matchPercent', { percent: bestPath.progress.percentComplete })
+                : t('dashboard.match.startPathway')}
+            </p>
+          </Link>
+
+          <Link
+            to="/profile"
+            className="interactive-card focus-ring group rounded-[20px] border border-stone-200 bg-white p-4 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400">
+                {t('dashboard.match.accessFit')}
+              </p>
+              <ShieldCheck className="h-4 w-4 text-primary-500" />
+            </div>
+            <p className="mt-3 text-xl font-bold text-stone-950">
+              {accessProfiled ? t('dashboard.match.profiled') : t('dashboard.match.needsSetup')}
+            </p>
+            <p className="mt-1 text-sm font-medium text-stone-500">{t('dashboard.match.addInProfile')}</p>
+          </Link>
         </div>
-      </section>
+      </SectionCard>
 
-      <section className="grid gap-5 xl:grid-cols-[1fr_360px]">
-        <div className="interactive-card rounded-[28px] border border-stone-200 bg-white p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-stone-400">Recommended work</p>
-              <h2 className="mt-1 text-xl font-bold text-stone-950">Priority actions</h2>
-            </div>
-            <LineChart className="h-5 w-5 text-primary-500" />
-          </div>
+      {/* Section 3 — AI insight */}
+      {(insight.loading || insight.text || !insightReady) && (
+        <AiInsight
+          eyebrow={t('dashboard.insights.eyebrow')}
+          loading={insight.loading}
+          loadingLabel={t('dashboard.insights.loading')}
+          body={insight.text || t('dashboard.insights.fallback')}
+          actionLabel={t('dashboard.insights.viewSkills')}
+          onAction={() => navigate('/roadmaps')}
+        />
+      )}
 
-          <div className="grid gap-3 md:grid-cols-3">
-            {nextActions.map((action) => {
-              const Icon = action.icon;
-              return (
-                <Link
-                  key={action.title}
-                  to={action.path}
-                  className="interactive-card group min-h-[190px] rounded-[24px] border border-stone-100 bg-stone-50 p-4 hover:-translate-y-0.5 hover:border-primary-200 hover:bg-white hover:shadow-lg hover:shadow-primary-950/5 focus-ring"
+      {/* Section 4 — Skills overview */}
+      <SectionCard title={t('dashboard.skills.title')}>
+        {skills.length ? (
+          <>
+            <SkillBars skills={skills} />
+            {topSkillName && (
+              <p className="mt-4 text-sm font-medium text-stone-500">
+                {t('dashboard.skills.summary', { top: topSkillName })}
+              </p>
+            )}
+          </>
+        ) : (
+          <EmptyState
+            icon={<TrendingUp className="h-5 w-5" />}
+            title={t('dashboard.skills.title')}
+            description={t('dashboard.skills.empty')}
+            ctaLabel={t('dashboard.skills.addCta')}
+            to="/profile"
+          />
+        )}
+      </SectionCard>
+
+      {/* Section 5 — Missing skills */}
+      <SectionCard title={t('dashboard.skills.missingTitle')}>
+        {missingSkills.length ? (
+          <>
+            <div className="flex flex-wrap gap-2">
+              {missingSkills.map((gap) => (
+                <span
+                  key={gap.name}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold ${importanceTone(gap.importance)}`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="interactive-icon flex h-11 w-11 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm group-hover:scale-105 group-hover:bg-primary-50">
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <span className="interactive-card rounded-full bg-primary-100 px-2.5 py-1 text-xs font-bold text-primary-700 group-hover:bg-primary-200">{action.status}</span>
-                  </div>
-                  <h3 className="mt-5 text-base font-bold text-stone-950">{action.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-stone-500">{action.description}</p>
-                  <div className="mt-4 inline-flex items-center text-sm font-bold text-stone-950">
-                    Open
-                    <ArrowRight className="interactive-icon ml-2 h-4 w-4 group-hover:translate-x-1" />
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                  {gap.name}
+                  <span className="text-[11px] font-bold opacity-70">· {importanceLabel(gap.importance)}</span>
+                </span>
+              ))}
+            </div>
+            <Link
+              to="/roadmaps"
+              className="interactive-button mt-4 inline-flex text-sm font-bold text-primary-700 hover:text-primary-800"
+            >
+              {t('dashboard.skills.viewPath')}
+            </Link>
+          </>
+        ) : (
+          <EmptyState
+            icon={<MapIcon className="h-5 w-5" />}
+            title={t('dashboard.skills.missingTitle')}
+            description={t('dashboard.skills.missingEmpty')}
+            ctaLabel={t('dashboard.path.create')}
+            to="/roadmaps"
+          />
+        )}
+      </SectionCard>
+
+      {/* Section 6 — Learning path */}
+      <SectionCard
+        title={t('dashboard.path.title')}
+        action={
+          bestPath ? (
+            <span className="rounded-full bg-primary-100 px-3 py-1 text-xs font-bold text-primary-700">
+              {t('dashboard.path.matchPercent', { percent: bestPath.progress.percentComplete })}
+            </span>
+          ) : undefined
+        }
+      >
+        {pathSteps.length ? (
+          <>
+            <p className="mb-4 text-sm font-medium text-stone-500">
+              {t('dashboard.path.current', {
+                current: Math.min(bestPath?.progress.currentPhase || 1, pathSteps.length),
+                total: pathSteps.length,
+              })}
+            </p>
+            <LearningPathStepper steps={pathSteps} />
+          </>
+        ) : (
+          <EmptyState
+            icon={<MapIcon className="h-5 w-5" />}
+            title={t('dashboard.path.title')}
+            description={t('dashboard.path.empty')}
+            ctaLabel={t('dashboard.path.create')}
+            to="/roadmaps"
+          />
+        )}
+      </SectionCard>
+
+      {/* Section 7 — Activity */}
+      <SectionCard title={t('dashboard.activity.title')} eyebrow={t('dashboard.activity.subtitle')}>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {activityStats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <div key={stat.label} className="rounded-[20px] border border-stone-100 bg-stone-50 p-4">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <p className="mt-3 text-2xl font-bold text-stone-950">{stat.value}</p>
+                <p className="mt-1 text-sm font-medium text-stone-500">{stat.label}</p>
+              </div>
+            );
+          })}
         </div>
+      </SectionCard>
 
-        <ProgressTrack items={liveProgressTimeline} />
-      </section>
+      {/* Section 8 — Smart reminders */}
+      <SectionCard title={t('dashboard.notifications.title')}>
+        {notifications.length ? (
+          <ul className="space-y-2">
+            {notifications.map((note) => (
+              <li
+                key={note}
+                className="flex items-start gap-3 rounded-[16px] border border-stone-100 bg-stone-50 px-4 py-3 text-sm font-medium text-stone-700"
+              >
+                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary-500" />
+                {note}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm font-medium text-stone-500">{t('dashboard.notifications.empty')}</p>
+        )}
+      </SectionCard>
 
-      <section className="interactive-card rounded-[28px] border border-primary-100 bg-primary-50 p-4 shadow-sm hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
+      {/* Section 9 — Accessibility health */}
+      <section className="interactive-card rounded-[28px] border border-primary-100 bg-primary-50 p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-3">
-            <span className="interactive-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-primary-600 shadow-sm">
               <HeartPulse className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="text-lg font-bold text-stone-950">Accessibility health</h2>
+              <h2 className="text-lg font-bold text-stone-950">{t('dashboard.accessibilityHealth.title')}</h2>
               <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-600">
-                Your workspace keeps the main career tools visible, readable, and reachable without digging through empty screens.
+                {t('dashboard.accessibilityHealth.desc')}
               </p>
             </div>
           </div>
           <Link
             to="/settings"
-            className="interactive-button group inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-bold text-stone-950 shadow-sm hover:bg-primary-100 hover:shadow-md"
+            className="interactive-button inline-flex h-11 items-center justify-center rounded-full bg-white px-5 text-sm font-bold text-stone-950 shadow-sm hover:bg-primary-100 hover:shadow-md"
           >
-            Review settings
-            <ArrowRight className="interactive-icon ml-2 h-4 w-4 group-hover:translate-x-0.5" />
+            {t('dashboard.accessibilityHealth.review')}
           </Link>
         </div>
       </section>
