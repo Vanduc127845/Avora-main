@@ -319,7 +319,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-[920px] space-y-5 text-stone-950">
+    <div className="mx-auto max-w-[1180px] space-y-5 text-stone-950">
       {/* Hero */}
       <SectionCard>
         <p className="text-sm font-bold text-stone-400">{t('dashboard.report')}</p>
@@ -440,6 +440,8 @@ export default function DashboardPage() {
         </div>
       </SectionCard>
 
+      {/* Two-column area — balanced, neither crammed nor endlessly long */}
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
       {/* AI insights */}
       <SectionCard eyebrow={t('dashboard.careerMatches.eyebrow')} title={t('dashboard.careerMatches.title')}>
         {careerMatches.length ? (
@@ -617,6 +619,7 @@ export default function DashboardPage() {
           </Link>
         </div>
       </SectionCard>
+      </div>
 
       {/* Accessibility health */}
       <section className="interactive-card rounded-[28px] border border-primary-100 bg-primary-50 p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md hover:shadow-sky-950/5">
