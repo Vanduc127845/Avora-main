@@ -71,11 +71,111 @@
     }
   },
   "dashboard": {
-    "welcome": "Welcome back, {{name}}!",
-    "progress": "Your Progress",
-    "recentActivity": "Recent Activity",
-    "quickActions": "Quick Actions",
-    "recommended": "Recommended for You"
+    "report": "Avora career report",
+    "greeting": "Welcome back, {{name}} 👋",
+    "readyPercent": "{{percent}}% ready",
+    "syncing": "Syncing",
+    "liveData": "Live data",
+    "accessibilityInformed": "Accessibility-informed",
+    "updatedFrom": "Updated from your profile, jobs, roadmaps, and interview practice.",
+    "syncError": "Some data could not sync: {{error}}",
+    "stepProgress": "You have completed {{done}}/{{total}} steps",
+    "step": {
+      "profile": "Profile",
+      "assessment": "Assessment",
+      "jobs": "Jobs",
+      "interview": "Interview"
+    },
+    "primaryCta": {
+      "eyebrow": "NEXT STEP",
+      "completeProfile": "Complete your profile",
+      "completeProfileDesc": "Add target roles, skills, and support needs.",
+      "completeAssessment": "Finish your Career Assessment",
+      "completeAssessmentDesc": "A 5-minute chat so Avora understands you and points the right way.",
+      "saveJob": "Save a matching job",
+      "saveJobDesc": "Explore jobs and save the roles you care about.",
+      "createRoadmap": "Create your first learning roadmap",
+      "createRoadmapDesc": "Turn a suitable job into a weekly learning plan.",
+      "practiceInterview": "Practice one interview answer",
+      "practiceInterviewDesc": "Get AI feedback on a STAR-structured response.",
+      "allDone": "You're on track 🎉",
+      "allDoneDesc": "Keep your profile updated and keep practicing to stay sharp.",
+      "minutes": "{{count}} min",
+      "start": "Start"
+    },
+    "metric": {
+      "profile": "Profile",
+      "roadmaps": "Roadmaps",
+      "savedJobs": "Saved jobs",
+      "practice": "Practice",
+      "addSkills": "Add skills",
+      "skillsCount": "{{count}} skills",
+      "avg": "{{percent}}% avg",
+      "ready": "Ready",
+      "findRoles": "Find roles",
+      "score": "{{percent}}% score",
+      "startShort": "Start",
+      "sessions": "{{count}} sessions"
+    },
+    "match": {
+      "title": "Matching jobs & paths",
+      "topMatch": "TOP MATCH",
+      "pickRole": "Pick a role",
+      "roleHint": "From profile and saved jobs",
+      "bestPath": "BEST PATH",
+      "startPathway": "Start a pathway",
+      "accessFit": "ACCESS FIT",
+      "profiled": "Profiled",
+      "needsSetup": "Needs setup",
+      "addInProfile": "Add in Profile",
+      "view": "View"
+    },
+    "insights": {
+      "eyebrow": "AVORA SUGGESTS",
+      "loading": "Generating personalized suggestions…",
+      "viewSkills": "View suggested skills →",
+      "fallback": "Complete your profile and save a few jobs so Avora can give sharper suggestions."
+    },
+    "skills": {
+      "title": "Your skills",
+      "summary": "You're strongest at {{top}}; keep building the rest.",
+      "empty": "Add skills to your profile to see a skills overview.",
+      "addCta": "Update skills →",
+      "missingTitle": "Skills to improve",
+      "missingEmpty": "Create a roadmap so Avora can highlight skills to build.",
+      "viewPath": "View learning path →",
+      "important": "Important",
+      "somewhatImportant": "Fairly important",
+      "niceToHave": "Nice to have"
+    },
+    "path": {
+      "title": "Learning path",
+      "current": "You're at step {{current}}/{{total}}",
+      "matchPercent": "{{percent}}% complete",
+      "empty": "No roadmap yet. Create one from a matching job.",
+      "create": "Create roadmap →"
+    },
+    "activity": {
+      "title": "Your progress",
+      "subtitle": "Recent activity summary",
+      "profileDone": "Profile complete",
+      "jobsSaved": "Jobs saved",
+      "practiced": "Practice sessions",
+      "assessmentsDone": "Assessments done"
+    },
+    "notifications": {
+      "title": "Smart reminders",
+      "empty": "No reminders. You're all good 👍",
+      "profileIncomplete": "Profile is only {{percent}}% — complete it to improve matches.",
+      "jobsNoRoadmap": "You saved {{count}} jobs but have no roadmap yet.",
+      "assessmentPending": "Finish your Career Assessment to unlock personalized suggestions.",
+      "interviewReady": "You're ready to practice interviews for your target role."
+    },
+    "accessibilityHealth": {
+      "title": "Accessibility health",
+      "desc": "Your workspace keeps career tools clear, readable, and reachable — no digging through empty screens.",
+      "review": "Review settings"
+    }
   },
   "accessibility": {
     "settings": "Accessibility Settings",

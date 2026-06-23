@@ -71,11 +71,111 @@
     }
   },
   "dashboard": {
-    "welcome": "Chào mừng trở lại, {{name}}!",
-    "progress": "Tiến độ của bạn",
-    "recentActivity": "Hoạt động gần đây",
-    "quickActions": "Thao tác nhanh",
-    "recommended": "Đề xuất cho bạn"
+    "report": "Báo cáo nghề nghiệp Avora",
+    "greeting": "Chào lại, {{name}} 👋",
+    "readyPercent": "Sẵn sàng {{percent}}%",
+    "syncing": "Đang đồng bộ",
+    "liveData": "Dữ liệu trực tiếp",
+    "accessibilityInformed": "Tối ưu cho trợ năng",
+    "updatedFrom": "Cập nhật từ hồ sơ, việc làm, lộ trình và phần luyện phỏng vấn của bạn.",
+    "syncError": "Một số dữ liệu chưa đồng bộ được: {{error}}",
+    "stepProgress": "Bạn đã hoàn thành {{done}}/{{total}} bước",
+    "step": {
+      "profile": "Hồ sơ",
+      "assessment": "Đánh giá",
+      "jobs": "Việc làm",
+      "interview": "Phỏng vấn"
+    },
+    "primaryCta": {
+      "eyebrow": "BƯỚC TIẾP THEO",
+      "completeProfile": "Hoàn thiện hồ sơ của bạn",
+      "completeProfileDesc": "Thêm vai trò mục tiêu, kỹ năng và nhu cầu hỗ trợ.",
+      "completeAssessment": "Hoàn thành Career Assessment",
+      "completeAssessmentDesc": "Trò chuyện 5 phút để Avora hiểu bạn và gợi ý đúng hướng.",
+      "saveJob": "Lưu một việc làm phù hợp",
+      "saveJobDesc": "Khám phá việc làm và lưu vai trò bạn quan tâm.",
+      "createRoadmap": "Tạo lộ trình học đầu tiên",
+      "createRoadmapDesc": "Biến một việc phù hợp thành kế hoạch học theo tuần.",
+      "practiceInterview": "Luyện một câu phỏng vấn",
+      "practiceInterviewDesc": "Nhận phản hồi AI cho một câu trả lời theo cấu trúc STAR.",
+      "allDone": "Bạn đang đi đúng hướng 🎉",
+      "allDoneDesc": "Tiếp tục cập nhật hồ sơ và luyện tập để giữ phong độ.",
+      "minutes": "{{count}} phút",
+      "start": "Bắt đầu"
+    },
+    "metric": {
+      "profile": "Hồ sơ",
+      "roadmaps": "Lộ trình",
+      "savedJobs": "Việc đã lưu",
+      "practice": "Luyện tập",
+      "addSkills": "Thêm kỹ năng",
+      "skillsCount": "{{count}} kỹ năng",
+      "avg": "{{percent}}% trung bình",
+      "ready": "Sẵn sàng",
+      "findRoles": "Tìm việc",
+      "score": "{{percent}}% điểm",
+      "startShort": "Bắt đầu",
+      "sessions": "{{count}} buổi"
+    },
+    "match": {
+      "title": "Việc làm & lộ trình phù hợp",
+      "topMatch": "VIỆC PHÙ HỢP NHẤT",
+      "pickRole": "Chọn một vai trò",
+      "roleHint": "Từ hồ sơ và việc đã lưu",
+      "bestPath": "LỘ TRÌNH TỐT NHẤT",
+      "startPathway": "Bắt đầu một lộ trình",
+      "accessFit": "NHU CẦU HỖ TRỢ",
+      "profiled": "Đã thiết lập",
+      "needsSetup": "Cần thiết lập",
+      "addInProfile": "Thêm trong Hồ sơ",
+      "view": "Xem"
+    },
+    "insights": {
+      "eyebrow": "AVORA GỢI Ý",
+      "loading": "Đang tạo gợi ý cá nhân hoá…",
+      "viewSkills": "Xem các kỹ năng đề xuất →",
+      "fallback": "Hoàn thiện hồ sơ và lưu một vài việc làm để Avora đưa ra gợi ý sát hơn."
+    },
+    "skills": {
+      "title": "Kỹ năng của bạn",
+      "summary": "Bạn mạnh nhất ở {{top}}, nên tiếp tục bồi đắp các kỹ năng còn lại.",
+      "empty": "Thêm kỹ năng vào hồ sơ để xem tổng quan năng lực.",
+      "addCta": "Cập nhật kỹ năng →",
+      "missingTitle": "Kỹ năng cần cải thiện",
+      "missingEmpty": "Tạo một lộ trình để Avora chỉ ra kỹ năng cần bổ sung.",
+      "viewPath": "Xem lộ trình học →",
+      "important": "Quan trọng",
+      "somewhatImportant": "Khá quan trọng",
+      "niceToHave": "Nên có"
+    },
+    "path": {
+      "title": "Lộ trình học",
+      "current": "Bạn đang ở bước {{current}}/{{total}}",
+      "matchPercent": "{{percent}}% hoàn thành",
+      "empty": "Chưa có lộ trình. Tạo một lộ trình từ việc làm phù hợp.",
+      "create": "Tạo lộ trình →"
+    },
+    "activity": {
+      "title": "Tiến độ của bạn",
+      "subtitle": "Tổng hợp hoạt động gần đây",
+      "profileDone": "Hồ sơ hoàn thiện",
+      "jobsSaved": "Việc đã lưu",
+      "practiced": "Buổi luyện tập",
+      "assessmentsDone": "Đánh giá đã hoàn thành"
+    },
+    "notifications": {
+      "title": "Nhắc nhở thông minh",
+      "empty": "Không có nhắc nhở nào. Bạn đang ổn 👍",
+      "profileIncomplete": "Hồ sơ mới {{percent}}% — bổ sung để tăng độ phù hợp.",
+      "jobsNoRoadmap": "Bạn đã lưu {{count}} việc nhưng chưa có lộ trình nào.",
+      "assessmentPending": "Hoàn thành Career Assessment để mở khoá gợi ý cá nhân hoá.",
+      "interviewReady": "Bạn đã sẵn sàng luyện phỏng vấn cho vai trò mục tiêu."
+    },
+    "accessibilityHealth": {
+      "title": "Sức khoẻ trợ năng",
+      "desc": "Không gian làm việc giữ các công cụ nghề nghiệp luôn rõ ràng, dễ đọc và dễ tới — không phải lục qua màn hình trống.",
+      "review": "Xem cài đặt"
+    }
   },
   "accessibility": {
     "settings": "Cài đặt Hỗ trợ Tiếp cận",
