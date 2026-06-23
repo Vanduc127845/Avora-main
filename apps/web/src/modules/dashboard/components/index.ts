@@ -5,3 +5,8 @@ export { default as AiInsight } from './AiInsight';
 export { default as EmptyState } from './EmptyState';
 export { default as SkillBars } from './SkillBars';
 export { default as LearningPathStepper, type PathStep } from './LearningPathStepper';
+export { default as HorizontalPathStepper } from './HorizontalPathStepper';
+export { default as ProgressRing } from './ProgressRing';
+export { default as SkillRadar, type RadarAxis } from './SkillRadar';
+export { default as ActivitySparkline } from './ActivitySparkline';
+export { default as Leaderboard, type LeaderboardEntry } from './Leaderboard';

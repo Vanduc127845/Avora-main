@@ -175,6 +175,62 @@
       "title": "Sức khoẻ trợ năng",
       "desc": "Không gian làm việc giữ các công cụ nghề nghiệp luôn rõ ràng, dễ đọc và dễ tới — không phải lục qua màn hình trống.",
       "review": "Xem cài đặt"
+    },
+    "period": "Tháng 5, 2026",
+    "filters": "Bộ lọc",
+    "details": "Chi tiết",
+    "modulesShort": "{{count}} mô-đun",
+    "savedJobsShort": "{{count}} việc đã lưu",
+    "plansShort": "{{count}} kế hoạch",
+    "practiceShort": "{{count}} buổi luyện",
+    "rightRail": {
+      "topMatch": "VIỆC PHÙ HỢP NHẤT",
+      "pickRole": "Chọn một vai trò",
+      "bestPath": "LỘ TRÌNH TỐT NHẤT",
+      "bestMatch": "KHỚP NHẤT",
+      "notSet": "Chưa thiết lập",
+      "fromProfile": "Từ hồ sơ và việc đã lưu",
+      "accessFit": "NHU CẦU HỖ TRỢ",
+      "needsSetup": "Cần thiết lập",
+      "addInProfile": "Thêm trong Hồ sơ",
+      "profiled": "Đã thiết lập",
+      "nextReview": "LẦN ĐÁNH GIÁ TIẾP",
+      "review": "Đánh giá",
+      "startDiscovery": "Bắt đầu khám phá"
+    },
+    "careerMatches": {
+      "eyebrow": "AVORA GỢI Ý",
+      "title": "Gợi ý nghề nghiệp phù hợp",
+      "matchPercent": "{{percent}}% phù hợp",
+      "viewAll": "Xem tất cả gợi ý →"
+    },
+    "radar": {
+      "title": "Biểu đồ năng lực",
+      "profile": "Hồ sơ",
+      "skills": "Kỹ năng",
+      "jobs": "Việc làm",
+      "roadmap": "Lộ trình",
+      "interview": "Phỏng vấn"
+    },
+    "weekly": {
+      "title": "Tiến độ tuần này",
+      "subtitle": "Hoạt động của bạn",
+      "profileDone": "Hoàn thành hồ sơ",
+      "jobsViewed": "Việc đã xem",
+      "practiced": "Buổi thực hành",
+      "interview": "Phỏng vấn thử"
+    },
+    "pathSuggested": {
+      "title": "Lộ trình đề xuất",
+      "viewDetail": "Xem chi tiết"
+    },
+    "leaderboard": {
+      "eyebrow": "BẢNG XẾP HẠNG",
+      "title": "Top người dùng",
+      "level": "Level {{n}}",
+      "you": "Bạn",
+      "viewAll": "Xem bảng xếp hạng →",
+      "sample": "Dữ liệu mẫu"
     }
   },
   "accessibility": {

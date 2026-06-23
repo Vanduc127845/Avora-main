@@ -175,6 +175,62 @@
       "title": "Accessibility health",
       "desc": "Your workspace keeps career tools clear, readable, and reachable — no digging through empty screens.",
       "review": "Review settings"
+    },
+    "period": "May 2026",
+    "filters": "Filters",
+    "details": "Details",
+    "modulesShort": "{{count}} modules",
+    "savedJobsShort": "{{count}} saved jobs",
+    "plansShort": "{{count}} plans",
+    "practiceShort": "{{count}} practice",
+    "rightRail": {
+      "topMatch": "TOP MATCH",
+      "pickRole": "Pick a role",
+      "bestPath": "BEST PATH",
+      "bestMatch": "BEST MATCH",
+      "notSet": "Not set",
+      "fromProfile": "From profile and saved jobs",
+      "accessFit": "ACCESS FIT",
+      "needsSetup": "Needs setup",
+      "addInProfile": "Add in Profile",
+      "profiled": "Profiled",
+      "nextReview": "NEXT REVIEW",
+      "review": "Assessment",
+      "startDiscovery": "Start discovery"
+    },
+    "careerMatches": {
+      "eyebrow": "AVORA SUGGESTS",
+      "title": "Matching career suggestions",
+      "matchPercent": "{{percent}}% match",
+      "viewAll": "View all suggestions →"
+    },
+    "radar": {
+      "title": "Skills radar",
+      "profile": "Profile",
+      "skills": "Skills",
+      "jobs": "Jobs",
+      "roadmap": "Roadmap",
+      "interview": "Interview"
+    },
+    "weekly": {
+      "title": "This week's progress",
+      "subtitle": "Your activity",
+      "profileDone": "Profile completion",
+      "jobsViewed": "Jobs viewed",
+      "practiced": "Practice sessions",
+      "interview": "Mock interviews"
+    },
+    "pathSuggested": {
+      "title": "Suggested path",
+      "viewDetail": "View detail"
+    },
+    "leaderboard": {
+      "eyebrow": "LEADERBOARD",
+      "title": "Top users",
+      "level": "Level {{n}}",
+      "you": "You",
+      "viewAll": "View leaderboard →",
+      "sample": "Sample data"
     }
   },
   "accessibility": {
